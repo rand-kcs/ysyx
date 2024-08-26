@@ -1,3 +1,10 @@
+TOPNAME=top
+
+
+
+
+include
+
 all:
 	@echo "Write this Makefile by your self."
 
@@ -7,7 +14,7 @@ sim:
 	@echo
 	@echo "-- VERILATE-----------------"
 	verilator -cc --exe --build -Wall --trace-fst --timing  vsrc/testbench.v vsrc/switch.v csrc/sim_main.cpp
-
+	
 	@echo
 	@echo "-- RUN--------------------"
 	@rm -rf logs
