@@ -30,9 +30,62 @@ static char *code_format =
 "  printf(\"%%u\", result); "
 "  return 0; "
 "}";
+static int buf_index = 0;
 
-static void gen_rand_expr() {
-  buf[0] = '\0';
+static uint32_t choose(int up) {
+	return (uint32_t) rand() % up;
+}
+// TODO: HEX? DEC? Negetive?
+static void gen_num() {
+	uint32_t rand_gen = choose(10000)	;
+	char str[10];
+	//char u_symbol[20] = "(unsigned)";
+	sprintf(str, "%u", rand_gen);
+	strcat(str, "U");
+	buf[buf_index] = '\0';
+	//strcat(buf, u_symbol);
+	//buf_index += strlen(u_symbol);
+	strcat(buf, str);
+	buf_index += strlen(str);
+}
+
+static void gen_rand_op() {
+	switch(choose(4)) {
+		case 0: buf[buf_index++] = '+'; break;
+		case 1: buf[buf_index++] = '-';break;
+		case 2: buf[buf_index++] = '*';break;
+		default: buf[buf_index++] = '/';break;
+	}
+}
+
+static const int MAX_LEVEL = 7;
+static const int MIN_LEVEL = 2;
+
+static void gen_rand_expr(int level) {
+	uint32_t rand_space = choose(3)	;
+	for(int i = 0; i < rand_space; i++)
+		buf[buf_index++] =' ';
+	
+	if(level > MAX_LEVEL) {
+		gen_num(); return;
+	}
+ 
+  if(level < MIN_LEVEL) {
+		 gen_rand_expr(level+1); gen_rand_op(); gen_rand_expr(level+1);
+		 return ;
+	}
+
+	switch(choose(3)) {
+		case 0 : gen_num(); break;
+		case 1 : buf[buf_index++] = '('; gen_rand_expr(level+1); buf[buf_index++]=')';break;
+		default: gen_rand_expr(level+1); gen_rand_op(); gen_rand_expr(level+1);break;
+	}
+}
+
+static void gen_rand_expr_main() {
+	buf_index = 0;
+	gen_rand_expr(0);
+	buf[buf_index] = '\0';
 }
 
 int main(int argc, char *argv[]) {
@@ -44,7 +97,7 @@ int main(int argc, char *argv[]) {
   }
   int i;
   for (i = 0; i < loop; i ++) {
-    gen_rand_expr();
+    gen_rand_expr_main();
 
     sprintf(code_buf, code_format, buf);
 
@@ -54,6 +107,7 @@ int main(int argc, char *argv[]) {
     fclose(fp);
 
     int ret = system("gcc /tmp/.code.c -o /tmp/.expr");
+		//printf("System Call Return Value: %d\n", ret);
     if (ret != 0) continue;
 
     fp = popen("/tmp/.expr", "r");
@@ -61,6 +115,8 @@ int main(int argc, char *argv[]) {
 
     int result;
     ret = fscanf(fp, "%d", &result);
+		if(ret != 1) continue;
+		//printf("RETVALE: %d \n", ret);
     pclose(fp);
 
     printf("%u %s\n", result, buf);

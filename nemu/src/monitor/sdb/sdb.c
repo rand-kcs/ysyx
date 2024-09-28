@@ -17,6 +17,7 @@
 #include <cpu/cpu.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <memory/paddr.h>
 #include "sdb.h"
 
 static int is_batch_mode = false;
@@ -54,6 +55,12 @@ static int cmd_q(char *args) {
 
 static int cmd_help(char *args);
 
+static int cmd_si(char *args);
+
+static int cmd_info(char *args);
+
+static int cmd_x(char *args);
+
 static struct {
   const char *name;
   const char *description;
@@ -62,6 +69,9 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
+  { "si", "Step N inst", cmd_si },
+  { "info", "Print info about SUBCMD", cmd_info},
+  { "x", "Scan N * 4 bytes for the given address", cmd_x},
 
   /* TODO: Add more commands */
 
@@ -92,6 +102,73 @@ static int cmd_help(char *args) {
   return 0;
 }
 
+static int cmd_x(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+	int N; paddr_t address;
+  if (arg == NULL) {
+    /* no argument given */
+  	printf("Usage: x N addres\n");
+		return 0;
+  }
+	N = strtol(arg, NULL, 10);
+	if(N == 0) {
+		printf("Unvalid N\n");
+		return 0;
+	}
+	arg = strtok(NULL, " ");
+	if(arg == NULL) {
+  	printf("Usage: x N addres\n");
+		return 0;
+	}
+	address = strtol(arg, NULL, 16);
+	if(address == 0) {
+		printf("Unvalid address\n");
+		return 0;
+	}
+
+	for(int i = 0; i < N; i++) {
+		printf("0x%08x\n", paddr_read(address, 4));
+		address+=4;
+	}
+	return 0;
+}
+
+static int cmd_si(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+  if (arg == NULL) {
+    /* no argument given */
+    cpu_exec(1);
+  }
+  else {
+   	//char** endptr;
+		int cnt = strtol(arg, NULL, 10);
+		if(cnt == 0){
+			printf("Unvalid count or zero provided: '%s'\n", arg);
+		}else{
+			cpu_exec(cnt);
+		}
+  }
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+
+  if (arg == NULL) {
+    /* no argument given */
+    printf("Usage: -r -w\n");
+  }
+  else {
+   	if(strcmp(arg, "r") == 0){
+			isa_reg_display();
+		}else
+    	printf("Unknown command '%s'\n", arg);
+  }
+  return 0;
+}
 void sdb_set_batch_mode() {
   is_batch_mode = true;
 }
@@ -103,6 +180,7 @@ void sdb_mainloop() {
   }
 
   for (char *str; (str = rl_gets()) != NULL; ) {
+		//printf("TEST FUNCTION: %s\n", str);
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */

@@ -18,6 +18,7 @@
 void init_monitor(int, char *[]);
 void am_init_monitor();
 void engine_start();
+word_t expr(char *e, bool *success);
 int is_exit_status_bad();
 
 int main(int argc, char *argv[]) {
@@ -27,6 +28,16 @@ int main(int argc, char *argv[]) {
 #else
   init_monitor(argc, argv);
 #endif
+	uint32_t result;
+	bool success[1];
+	char texpr[2000];
+	FILE* input = fopen("/tmp/input.in", "r");
+	while(fscanf(input, "%u %[^\n]%*c", &result, texpr) == 2){
+		uint32_t out = 	expr(texpr, success);
+		//printf("", ;
+		Assert(result==out, "Error Result, Test: %s\nExpected: %u\nGet: %u\n",texpr, result, out);
+	}
+	fclose(input);
 
   /* Start engine. */
   engine_start();

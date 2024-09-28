@@ -19,10 +19,16 @@
  * Type 'man regex' for more information about POSIX regex functions.
  */
 #include <regex.h>
+#include <memory/paddr.h>
+#define MIN_PRIOR 0
 
 enum {
   TK_NOTYPE = 256, TK_EQ,
-
+	TK_DEC, TK_HEX,TK_NEG,
+	TK_REF, TK_REG, TK_ABC,
+	TK_GEQ, TK_LEQ, TK_GTER,
+	TK_LESS, TK_LAND, TK_LOR,
+	TK_BAND, TK_BOR, 
   /* TODO: Add more token types */
 
 };
@@ -38,8 +44,53 @@ static struct rule {
 
   {" +", TK_NOTYPE},    // spaces
   {"\\+", '+'},         // plus
+  {"-", '-'},         // minus
+  {"\\*", '*'},         // multi
+  {"/", '/'},         // divide
+  {"\\(", '('},         // left bracket
+  {"\\)", ')'},         // right bracket
   {"==", TK_EQ},        // equal
+  {">=", TK_GEQ},        // Geater or equal
+  {">", TK_GTER},        // greated
+  {"<=", TK_LEQ},        // less or equl
+  {"<", TK_LESS},        // less
+  {"&&", TK_LAND},        // Logical AND
+  {"\\|\\|", TK_LOR},        // Lorgical OR
+  {"&", TK_BAND},        // Bitwise AND
+  {"\\|", TK_BOR},        // Bitwise OR
+	{"0x[0-9]+[U]?", TK_HEX}, //hexdecimal
+	{"[0-9]+[U]?", TK_DEC},  //decimal
+	{"\\$", TK_REG}, //register fetch value indicator
+	{"[a-z][a-z]", TK_ABC}, // now only to indicate REGISTER NAME
 };
+
+static struct prior {
+	const int op;
+	int prior_value;
+} priors[] = {
+	{'+', 4},
+	{'-', 4},
+	{'*', 3},
+	{'/', 3},
+	{TK_NEG,2},
+	{TK_REF,2},
+	{TK_GEQ,6},
+	{TK_GTER,6},
+	{TK_LEQ,6},
+	{TK_LESS,6},
+	{TK_EQ,7},
+	{TK_LAND,11},
+	{TK_LOR,12},
+	{TK_BAND,8},
+	{TK_BOR,10},
+};
+
+static int check_prior(int op) {
+	for(int i = 0; i < ARRLEN(priors); i++) 
+		if(op == priors[i].op)
+			return priors[i].prior_value;
+	Assert(0, "Unmatch operator index: %d\n", op);
+}
 
 #define NR_REGEX ARRLEN(rules)
 
@@ -60,6 +111,7 @@ void init_regex() {
       panic("regex compilation failed: %s\n%s", error_msg, rules[i].regex);
     }
   }
+	
 }
 
 typedef struct token {
@@ -67,7 +119,7 @@ typedef struct token {
   char str[32];
 } Token;
 
-static Token tokens[32] __attribute__((used)) = {};
+static Token tokens[128] __attribute__((used)) = {};
 static int nr_token __attribute__((used))  = 0;
 
 static bool make_token(char *e) {
@@ -95,7 +147,15 @@ static bool make_token(char *e) {
          */
 
         switch (rules[i].token_type) {
-          default: TODO();
+					case TK_NOTYPE:
+									break;
+					case TK_HEX:
+					case TK_DEC:	
+					case TK_ABC:
+								strncpy(tokens[nr_token].str, substr_start, substr_len);
+								tokens[nr_token].str[substr_len] = '\0';
+          default: tokens[nr_token].type = rules[i].token_type;
+									 nr_token++;
         }
 
         break;
@@ -107,19 +167,171 @@ static bool make_token(char *e) {
       return false;
     }
   }
-
+   for(int i = 0; i < nr_token; i++){
+     if(tokens[i].type == '-' && (i-1 < 0 || (tokens[i-1].type != TK_DEC &&tokens[i-1].type != TK_HEX&&tokens[i-1].type != ')')))
+       tokens[i].type = TK_NEG;
+   }
+	for(int i = 0; i < nr_token; i++){
+     if(tokens[i].type == '*' && (i-1 < 0 || (tokens[i-1].type != TK_DEC &&tokens[i-1].type != TK_HEX&&tokens[i-1].type != ')')))
+       tokens[i].type = TK_REF;
+   }
   return true;
 }
 
+// for now, just check that the each parathesis match, 
+// may extend to check the syntax error of the buf, like "1 ** 2" .etc
+bool check_expr_valid() {
+	int flag = 0;
+	for(int i = 0; i < nr_token; i++) {
+		if(tokens[i].type == '(') {
+			flag++;	
+		}else if(tokens[i].type == ')') {
+			flag--;	
+			if(flag < 0) {
+				printf("Error: ) Unmatch\n");		
+				return false;
+			}
+		}
+	}
+	if(flag != 0) {
+		printf("Error: ( Unmatch\n");		
+		return false;
+	}
+	printf("----Valid----\n");
+	return true;
+}
+
+bool check_parentheses(int p, int q) {
+	if(!(tokens[p].type == '(' && tokens[q].type == ')')){
+		return false;		
+	} 
+	int flag = 0;
+	for(int i = p + 1; i <= q-1; i++) {
+		if(tokens[i].type == '(') {
+			flag++;	
+		}else if(tokens[i].type == ')') {
+			flag--;	
+			if(flag < 0) {
+				return false;
+			}
+		}
+	}
+	if(flag > 0) {
+		return false;
+	}
+	return true;
+
+}
+
+int find_main_operator(int p, int q) {
+	int op_pos = 0, op_prior = MIN_PRIOR;
+	int cur_prior;
+	for(int i = p; i <= q; i++) {
+		switch (tokens[i].type){
+		case '(':
+				int flag = 1, j;
+				for(j = i+1; ; j++) {
+					 if(tokens[j].type =='(')	
+							flag++;
+					else if(tokens[j].type==')') {
+							flag--;
+							if(flag == 0)
+								break;
+					}
+				}
+				i = j;
+				break;
+		case TK_HEX:
+		case TK_DEC:
+		case TK_ABC:	
+				break;
+		default:
+				cur_prior = check_prior(tokens[i].type);
+					if(cur_prior >= op_prior){
+						op_pos = i;	
+						op_prior = cur_prior;
+					}
+					break;
+		}
+	}
+	return op_pos;
+}
+
+
+uint32_t eval(int p, int q) {
+  if (p > q) {
+    /* Bad expression */
+		Assert(0, "Bad Expression with p:%d and q:%d\n", p, q);
+  }
+  else if (p == q) {
+    /* Single token.
+     * For now this token should be a number.
+     * Return the value of the number.
+     */
+			if(tokens[p].type == TK_DEC) {
+				 return strtol(tokens[p].str, NULL, 10);
+			}else if(tokens[p].type == TK_HEX) {
+				 return strtol(tokens[p].str, NULL, 16);
+			}else {
+				printf("Error! p==q but not a Number.\n");
+				return 0;
+			}
+  }
+  else if (check_parentheses(p, q) == true) {
+    /* The expression is surrounded by a matched pair of parentheses.
+     * If that is the case, just throw away the parentheses.
+     */
+    return eval(p + 1, q - 1);
+  }
+  else {
+    int op = find_main_operator(p,q);
+		int op_type = tokens[op].type;
+		if(op_type == TK_NEG) {
+			return -eval(op+1, q);
+		}else if(op_type == TK_REG) {
+			Assert(tokens[op+1].type == TK_ABC, "$ Unmatch");
+			bool success[1];
+			return isa_reg_str2val(tokens[op+1].str, success);
+		}else if(op_type == TK_REF) {
+			uint32_t val1 = eval(op + 1, q);
+			return paddr_read(val1, 4);
+		}else{
+   		 uint32_t val1 = eval(p, op - 1);
+   		 uint32_t val2 = eval(op + 1, q);
+
+   		 switch (op_type) {
+   		   case '+': return val1 + val2;
+   		   case '-': return val1 - val2;/* ... */
+   		   case '*': return val1 * val2;/* ... */
+   		   case '/': return val1 / val2;/* ... */
+   		   case TK_EQ: return val1 == val2;/* ... */
+   		   case TK_GEQ: return val1 >= val2;/* ... */
+   		   case TK_LEQ: return val1 <= val2;/* ... */
+   		   case TK_GTER: return val1 > val2;/* ... */
+   		   case TK_LESS: return val1 < val2;/* ... */
+   		   case TK_LAND: return val1 && val2;/* ... */
+   		   case TK_LOR: return val1 || val2;/* ... */
+   		   case TK_BAND: return val1 & val2;/* ... */
+   		   case TK_BOR: return val1 | val2;/* ... */
+   		   default:
+						Assert(0, "Operator Type Not Found!\n");
+   		 }
+		}
+  }
+}
 
 word_t expr(char *e, bool *success) {
   if (!make_token(e)) {
     *success = false;
     return 0;
   }
+	if(!check_expr_valid(0, nr_token-1)) {
+		*success = false;
+		return 0;	
+	}
 
   /* TODO: Insert codes to evaluate the expression. */
-  TODO();
+  //TODO();
+	return eval(0, nr_token-1);
 
-  return 0;
 }
