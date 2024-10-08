@@ -25,7 +25,7 @@
 enum {
   TK_NOTYPE = 256, TK_EQ,
 	TK_DEC, TK_HEX,TK_NEG,
-	TK_REF, TK_REG, TK_ABC,
+	TK_REF, TK_REG, TK_RNAME,
 	TK_GEQ, TK_LEQ, TK_GTER,
 	TK_LESS, TK_LAND, TK_LOR,
 	TK_BAND, TK_BOR, 
@@ -61,7 +61,7 @@ static struct rule {
 	{"0x[0-9]+[U]?", TK_HEX}, //hexdecimal
 	{"[0-9]+[U]?", TK_DEC},  //decimal
 	{"\\$", TK_REG}, //register fetch value indicator
-	{"[a-z][a-z]", TK_ABC}, // now only to indicate REGISTER NAME
+	{"[a-z][a-z0-9]", TK_RNAME}, // now only to indicate REGISTER NAME
 };
 
 static struct prior {
@@ -79,10 +79,11 @@ static struct prior {
 	{TK_LEQ,6},
 	{TK_LESS,6},
 	{TK_EQ,7},
+	{TK_BAND,8},
 	{TK_LAND,11},
 	{TK_LOR,12},
-	{TK_BAND,8},
 	{TK_BOR,10},
+	{TK_REG,2},
 };
 
 static int check_prior(int op) {
@@ -136,8 +137,10 @@ static bool make_token(char *e) {
         char *substr_start = e + position;
         int substr_len = pmatch.rm_eo;
 
+				#ifdef CONFIG_MATCH_OUT
         Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
             i, rules[i].regex, position, substr_len, substr_len, substr_start);
+				#endif
 
         position += substr_len;
 
@@ -151,7 +154,7 @@ static bool make_token(char *e) {
 									break;
 					case TK_HEX:
 					case TK_DEC:	
-					case TK_ABC:
+					case TK_RNAME:
 								strncpy(tokens[nr_token].str, substr_start, substr_len);
 								tokens[nr_token].str[substr_len] = '\0';
           default: tokens[nr_token].type = rules[i].token_type;
@@ -197,7 +200,9 @@ bool check_expr_valid() {
 		printf("Error: ( Unmatch\n");		
 		return false;
 	}
+#ifdef CONFIG_EXPR_EVAL
 	printf("----Valid----\n");
+#endif
 	return true;
 }
 
@@ -243,7 +248,7 @@ int find_main_operator(int p, int q) {
 				break;
 		case TK_HEX:
 		case TK_DEC:
-		case TK_ABC:	
+		case TK_RNAME:	
 				break;
 		default:
 				cur_prior = check_prior(tokens[i].type);
@@ -258,7 +263,7 @@ int find_main_operator(int p, int q) {
 }
 
 
-uint32_t eval(int p, int q) {
+uint32_t eval(int p, int q, bool* success) {
   if (p > q) {
     /* Bad expression */
 		Assert(0, "Bad Expression with p:%d and q:%d\n", p, q);
@@ -281,23 +286,27 @@ uint32_t eval(int p, int q) {
     /* The expression is surrounded by a matched pair of parentheses.
      * If that is the case, just throw away the parentheses.
      */
-    return eval(p + 1, q - 1);
+    return eval(p + 1, q - 1, success);
   }
   else {
     int op = find_main_operator(p,q);
 		int op_type = tokens[op].type;
 		if(op_type == TK_NEG) {
-			return -eval(op+1, q);
+			return -eval(op+1, q, success);
 		}else if(op_type == TK_REG) {
-			Assert(tokens[op+1].type == TK_ABC, "$ Unmatch");
-			bool success[1];
-			return isa_reg_str2val(tokens[op+1].str, success);
+			Assert(tokens[op+1].type == TK_RNAME, "$ Unmatch");
+			uint32_t ret_val = isa_reg_str2val(tokens[op+1].str, success);
+			if(!(*success)){
+				Log("%s: Can't find Register with name: %s\n", ANSI_FMT("ERROR", ANSI_FG_RED), tokens[op+1].str);
+				return 0;
+			}
+			return ret_val;
 		}else if(op_type == TK_REF) {
-			uint32_t val1 = eval(op + 1, q);
+			uint32_t val1 = eval(op + 1, q, success);
 			return paddr_read(val1, 4);
 		}else{
-   		 uint32_t val1 = eval(p, op - 1);
-   		 uint32_t val2 = eval(op + 1, q);
+   		 uint32_t val1 = eval(p, op - 1, success);
+   		 uint32_t val2 = eval(op + 1, q, success);
 
    		 switch (op_type) {
    		   case '+': return val1 + val2;
@@ -321,6 +330,7 @@ uint32_t eval(int p, int q) {
 }
 
 word_t expr(char *e, bool *success) {
+	*success = true;
   if (!make_token(e)) {
     *success = false;
     return 0;
@@ -332,6 +342,6 @@ word_t expr(char *e, bool *success) {
 
   /* TODO: Insert codes to evaluate the expression. */
   //TODO();
-	return eval(0, nr_token-1);
+	return eval(0, nr_token-1, success);
 
 }

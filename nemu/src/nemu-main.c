@@ -23,11 +23,18 @@ int is_exit_status_bad();
 
 int main(int argc, char *argv[]) {
   /* Initialize the monitor. */
+	// Test Address Sanitizer
+	//int *p = NULL;
+	//printf("%d",*p);
+
 #ifdef CONFIG_TARGET_AM
   am_init_monitor();
 #else
   init_monitor(argc, argv);
 #endif
+
+//TODO: edit Kconfig menucongig to add it
+#ifdef CONFIG_EXPR_EVAL
 	uint32_t result;
 	bool success[1];
 	char texpr[2000];
@@ -38,6 +45,7 @@ int main(int argc, char *argv[]) {
 		Assert(result==out, "Error Result, Test: %s\nExpected: %u\nGet: %u\n",texpr, result, out);
 	}
 	fclose(input);
+#endif
 
   /* Start engine. */
   engine_start();

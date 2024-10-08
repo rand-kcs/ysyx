@@ -215,3 +215,18 @@ config RT_CHECK
   default y
 
 endmenu
+
+menu "My own config"
+config EXPR_EVAL
+	bool "Testing expression evaluate before engine start."
+	default n
+
+config WATCHPOINT
+	bool "Enable watchpoints check each instruction cycle."
+	default n
+
+config MATCH_OUT
+	bool "Log Every Single Token Matchs"
+	default n
+
+endmenu

@@ -35,5 +35,11 @@ word_t isa_reg_str2val(const char *s, bool *success) {
 		if(strcmp(regs[i], s) == 0)	
 			return cpu.gpr[i];
 	}
-	Assert(0, "Can't Find Reg with Name: %s", s);
+	
+	if(strcmp(s, "pc") == 0) {
+		return cpu.pc;
+	}
+	
+	*success = false;
+	return 0;
 }

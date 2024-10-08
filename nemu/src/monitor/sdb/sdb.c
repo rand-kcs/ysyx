@@ -24,6 +24,10 @@ static int is_batch_mode = false;
 
 void init_regex();
 void init_wp_pool();
+void new_wp(char*);
+void free_wp(int);
+void info_wp();
+
 
 /* We use the `readline' library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
@@ -60,6 +64,9 @@ static int cmd_si(char *args);
 static int cmd_info(char *args);
 
 static int cmd_x(char *args);
+static int cmd_p(char *args);
+static int cmd_w(char *args);
+static int cmd_d(char *args);
 
 static struct {
   const char *name;
@@ -72,6 +79,9 @@ static struct {
   { "si", "Step N inst", cmd_si },
   { "info", "Print info about SUBCMD", cmd_info},
   { "x", "Scan N * 4 bytes for the given address", cmd_x},
+  { "p", "Print Value of the exprssion", cmd_p},
+  { "w", "Whenever the value of the EXPR changes, stop it.", cmd_w},
+  { "d", "Delete the certain WP specified by INDEX", cmd_d},
 
   /* TODO: Add more commands */
 
@@ -164,11 +174,96 @@ static int cmd_info(char *args) {
   else {
    	if(strcmp(arg, "r") == 0){
 			isa_reg_display();
-		}else
+		}else if(strcmp(arg, "w") == 0){
+			info_wp();
+		}else{
     	printf("Unknown command '%s'\n", arg);
+		}
   }
   return 0;
 }
+
+static int cmd_p(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+
+  if (arg == NULL) {
+    /* no argument given */
+    printf("Usage: p <expr> \n");
+  }
+  else {
+		bool success;	
+		
+		// Treat as a whole;
+		char* cmd_expr = (char*)malloc(100 * sizeof(char));
+		cmd_expr[0] = '\0';
+		while(arg != NULL) {
+			strcat(cmd_expr, arg);	
+			arg = strtok(NULL, " ")	;
+		}
+
+		uint32_t ret_val = expr(cmd_expr, &success);
+		free(cmd_expr);
+		if(!success) {
+			printf("Non-valid Expression: %s\n", arg);
+			return 0;
+		}
+		arg = strtok(NULL, " ");
+		printf("Hex: 0x%x\n", ret_val);
+		printf("Dec: %u\n", ret_val);
+  }
+  return 0;
+}
+
+static int cmd_w(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+  int i;
+
+  if (arg == NULL) {
+    /* no argument given */
+    for (i = 0; i < NR_CMD; i ++) {
+      printf("Usage: w <expr>\n");
+    }
+  }
+  else {
+		// Treat as a whole;
+		char* cmd_expr = (char*)malloc(100 * sizeof(char));
+		cmd_expr[0] = '\0';
+		while(arg != NULL) {
+			strcat(cmd_expr, arg);	
+			arg = strtok(NULL, " ")	;
+		}
+
+		new_wp(cmd_expr);
+		free(cmd_expr);
+  }
+  return 0;
+}
+
+static int cmd_d(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+  int i;
+
+  if (arg == NULL) {
+    /* no argument given */
+    for (i = 0; i < NR_CMD; i ++) {
+      printf("Usage: d <index>\n");
+    }
+  }
+  else {
+		char* endptr;
+		int NO =strtol(args, &endptr, 10);
+		if(endptr == arg)	{
+			Log("Index Non-valid: %s. ",arg);
+			return 0;
+		}
+		free_wp(NO);
+  }
+  return 0;
+}
+
 void sdb_set_batch_mode() {
   is_batch_mode = true;
 }
@@ -180,7 +275,6 @@ void sdb_mainloop() {
   }
 
   for (char *str; (str = rl_gets()) != NULL; ) {
-		//printf("TEST FUNCTION: %s\n", str);
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */
