@@ -14,7 +14,7 @@ reg [31:0] displayCouter;
 
 always@(posedge clk) begin
 	if(ready) begin
-		displayCouter <= 32'h9fffff;
+		displayCouter <= 32'h2fffff;
 	end
 
 	if(displayCouter > 32'b0)  begin
