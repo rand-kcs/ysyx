@@ -6,8 +6,10 @@ module my_ALU(
 	output reg [3:0] rst
 );
 // reg [3:0] {{{(A + no_B + 1'b1)B}B}B};
+reg [3:0] sub_rst;
 
 always@(*) begin
+	sub_rst=4'b0;
 	case (ctrl)
 		3'd0 : begin
 			{carry, rst} = A + B;
@@ -46,7 +48,9 @@ always@(*) begin
 		3'd6 : begin
 			//no_B = ~B;
 			// {mid_rst} = A + no_B + 1'b1;
-			overflow = (A[3] == {(A + {~B} + 1'b1)}[3]) && (A[3] != {(A + {~B} + 1'b1)}[3]);
+			{sub_rst} = A + {~B}+ 1'b1;
+			overflow = (A[3] == {~B}[3]) && (A[3] != sub_rst[3]);
+
 			rst = {3'b0, {(A +{~B}+ 1'b1)}[3] ^ overflow};
 			zero = ~rst[0];
 			carry = 1'b0;

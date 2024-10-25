@@ -2,6 +2,7 @@ TOPNAME=top
 BUILD_DIR=./build
 OBJ_DIR=$(BUILD_DIR)/obj_dir
 NXDC_FILES= constr/top.nxdc
+INC_PATH += $(YSYX_HOME)/DClabs/lib
 
 VERILATOR= verilator
 VERILATOR_CFLAGS += -MMD --build -cc -O3 --x-assign fast --x-initial fast --noassert
@@ -22,7 +23,7 @@ include $(NVBOARD_HOME)/scripts/nvboard.mk
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""
 
-VSRCS = ./vsrc/top.v ./vsrc/light.v
+VSRCS = $(shell find ./vsrc -name "*.v")
 CSRCS = $(abspath ./csrc/main.cpp)
 CSRCS += $(SRC_AUTO_BIND)
 
@@ -32,8 +33,10 @@ $(BIN): $(VSRCS) $(CSRCS) $(NVBOARD_ARCHIVE)
 	rm -rf $(OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
 		--top-module $(TOPNAME) $^ \
-		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS))  \
-		--Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN))
+		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
+		$(addprefix -I, $(INC_PATH)) \
+		--Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN)) \
+		
 	
 	
 
@@ -45,4 +48,4 @@ sim: $(BIN)
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	$^
  
-include ../Makefile
+include  ~/work/YSYX/FrameCode/ysyx-workbench/Makefile

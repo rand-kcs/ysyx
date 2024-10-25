@@ -6,8 +6,11 @@
 !/npc/*
 !Makefile
 !README.md
-!.gitignore
+.gitignore
 !init.sh
 /fceux-am
 /nvboard
 /am-kernels
+**/build/*
+**/obj_dir/*
+

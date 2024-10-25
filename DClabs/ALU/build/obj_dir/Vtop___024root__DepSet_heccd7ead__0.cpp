@@ -13,6 +13,8 @@ VL_INLINE_OPT void Vtop___024root___ico_sequent__TOP__0(Vtop___024root* vlSelf) 
     Vtop__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     VL_DEBUG_IF(VL_DBG_MSGF("+    Vtop___024root___ico_sequent__TOP__0\n"); );
     // Init
+    CData/*3:0*/ top__DOT__alu__DOT__sub_rst;
+    top__DOT__alu__DOT__sub_rst = 0;
     CData/*3:0*/ __Vtableidx1;
     __Vtableidx1 = 0;
     // Body
@@ -28,6 +30,7 @@ VL_INLINE_OPT void Vtop___024root___ico_sequent__TOP__0(Vtop___024root* vlSelf) 
                                        : (1U & (((IData)(vlSelf->A) 
                                                  + (IData)(vlSelf->B)) 
                                                 >> 4U))))));
+    top__DOT__alu__DOT__sub_rst = 0U;
     if ((4U & (IData)(vlSelf->ctrl))) {
         if ((2U & (IData)(vlSelf->ctrl))) {
             if ((1U & (IData)(vlSelf->ctrl))) {
@@ -38,20 +41,19 @@ VL_INLINE_OPT void Vtop___024root___ico_sequent__TOP__0(Vtop___024root* vlSelf) 
                 vlSelf->zero = (1U & (~ (IData)(vlSelf->rst)));
                 vlSelf->overflow = 0U;
             } else {
-                vlSelf->overflow = (((1U & ((IData)(vlSelf->A) 
-                                            >> 3U)) 
-                                     == (1U & (((IData)(1U) 
-                                                + ((IData)(vlSelf->A) 
-                                                   + 
-                                                   (~ (IData)(vlSelf->B)))) 
-                                               >> 3U))) 
-                                    & ((1U & ((IData)(vlSelf->A) 
-                                              >> 3U)) 
-                                       != (1U & (((IData)(1U) 
+                top__DOT__alu__DOT__sub_rst = (0xfU 
+                                               & ((IData)(1U) 
                                                   + 
                                                   ((IData)(vlSelf->A) 
                                                    + 
-                                                   (~ (IData)(vlSelf->B)))) 
+                                                   (~ (IData)(vlSelf->B)))));
+                vlSelf->overflow = (((1U & ((IData)(vlSelf->A) 
+                                            >> 3U)) 
+                                     == (1U & (~ ((IData)(vlSelf->B) 
+                                                  >> 3U)))) 
+                                    & ((1U & ((IData)(vlSelf->A) 
+                                              >> 3U)) 
+                                       != (1U & ((IData)(top__DOT__alu__DOT__sub_rst) 
                                                  >> 3U))));
                 vlSelf->rst = (1U & ((1U & (((IData)(1U) 
                                              + ((IData)(vlSelf->A) 

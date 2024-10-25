@@ -44,5 +44,8 @@ all:
 sim: $(BIN)
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	$^
+
+wavegen:
+	$(VERILATOR) --cc --exe --build -j 0 -Wall -timing --trace-fst csrc/sim_main.cpp vsrc/testbench.v vsrc/switch.v
  
 include ../Makefile
