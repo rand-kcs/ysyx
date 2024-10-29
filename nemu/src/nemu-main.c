@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
 
-//TODO: edit Kconfig menucongig to add it
+//xTODO: edit Kconfig menucongig to add it done
 #ifdef CONFIG_EXPR_EVAL
 	uint32_t result;
 	bool success[1];
