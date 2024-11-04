@@ -25,21 +25,21 @@ INCLUDES = $(addprefix -I, $(INC_PATH))
 CFLAGS  := -O2 -MMD -Wall -Werror $(INCLUDES) $(CFLAGS)
 LDFLAGS := -O2 $(LDFLAGS)
 
-OBJS = $(SRCS:%.c=$(OBJ_DIR)/%.o) $(CXXSRC:%.cc=$(OBJ_DIR)/%.o) $(SRCS:%.c=$(OBJ_DIR)/%.p)
+OBJS = $(SRCS:%.c=$(OBJ_DIR)/%.o) $(CXXSRC:%.cc=$(OBJ_DIR)/%.o) 
 
 # Compilation patterns
 $(OBJ_DIR)/%.o: %.c
 	@echo + CC $<
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c -o $@ $<
-	#$(call call_fixdep, $(@:.o=.d), $@)
+	$(call call_fixdep, $(@:.o=.d), $@)
 
+preprocess : $(SRCS:%.c=$(OBJ_DIR)/%.p)
 
 $(OBJ_DIR)/%.p: %.c
 	@echo + CC $<
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -E -o $@ $<
-	$(call call_fixdep, $(@:.o=.d), $@)
 
 $(OBJ_DIR)/%.o: %.cc
 	@echo + CXX $<
