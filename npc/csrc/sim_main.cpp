@@ -2,13 +2,40 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <verilated.h>
-#include "Vtestbench.h"
+#include "Vtop.h"
+#include "mem.h"
+#include "svdpi.h"
+#include "Vtop__Dpi.h"
+
+Vtop* tb;
+VerilatedContext* contextp;
+
+static void single_cycle() {
+	contextp->timeInc(1);
+  tb->clk = 0; tb->eval();
+	contextp->timeInc(1);
+  tb->clk = 1; tb->eval();
+}
+
+static void reset(int n) {
+  tb->rst = 1;
+  while (n -- > 0) single_cycle();
+  tb->rst = 0;
+}
+ 
+void print_reg_status() {
+	for(int i = 0; i < 32; i++){
+		printf("r%d : 0x%08x\n", i, tb->rf_dbg[i]);
+	}
+}
+
+
 
 int main(int argc, char** argv){
 	//Verilated::mkdir("logs");
 
 	// Construct a VerilatedContext to hold simulation time, etc.
-	VerilatedContext* contextp = new VerilatedContext;
+	contextp = new VerilatedContext;
 	
 	// Verilator must compute traced signals
 	contextp->traceEverOn(true);
@@ -17,22 +44,24 @@ int main(int argc, char** argv){
 	// This need to be called berfore create any mode;
 	contextp->commandArgs(argc, argv);
 
-	//Construct the Verilated Model, From VtestBench.h 
-	Vtestbench* tb = new Vtestbench{contextp};
+	//Construct the Verilated Model, From Vtop.h 
+	tb = new Vtop{contextp};
+
+	const svScope scope = svGetScopeFromName("TOP.top");
+	assert(scope);  // Check for nullptr if scope not found
+	svSetScope(scope);
+
 
 	// Set Vtop's input;
-
+	reset(5);
 	//Simulate until $finish
 	while(!contextp -> gotFinish()) {
-		contextp->timeInc(1);
-		int a = rand() & 1;
-		int b = rand() & 1;
-		tb->a = a;
-		tb->b = b;
-		tb->eval()	;
-
-		printf("a = %d, b = %d, f = %d\n", a, b, tb->f);
-		assert(tb->f == (a^b));
+		tb->inst = pmem_read(tb->pc);
+		printf("INST: 0x%08x by pc: 0x%x \n", tb->inst, tb->pc);
+		single_cycle();
+		print_reg_status();
+		if(ebreakYes())
+			break;
 	} 
 	tb->final();
 	delete tb;

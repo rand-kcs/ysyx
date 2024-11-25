@@ -36,7 +36,7 @@ $(BIN): $(VSRCS) $(CSRCS) $(NVBOARD_ARCHIVE)
 		--Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN))
 	
 	
-
+VSRC=$(shell find -name "*.v" | grep -v "$(TOPNAME).v")
 
 all:
 	@echo "Write this Makefile by your self."
@@ -45,7 +45,7 @@ sim: $(BIN)
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	$^
 
-wavegen:
-	$(VERILATOR) --cc --exe --build -j 0 -Wall -timing --trace-fst csrc/sim_main.cpp vsrc/testbench.v vsrc/switch.v
+npc_sim:
+	$(VERILATOR) --cc --exe --build -j 0 -Wall -timing --trace-fst csrc/sim_main.cpp vsrc/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
  
 include ../Makefile
