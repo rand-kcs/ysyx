@@ -58,7 +58,7 @@ static struct rule {
   {"\\|\\|", TK_LOR},        // Lorgical OR
   {"&", TK_BAND},        // Bitwise AND
   {"\\|", TK_BOR},        // Bitwise OR
-	{"0x[0-9]+[U]?", TK_HEX}, //hexdecimal
+	{"0x[0-9a-z]+[U]?", TK_HEX}, //hexdecimal
 	{"[0-9]+[U]?", TK_DEC},  //decimal
 	{"\\$", TK_REG}, //register fetch value indicator
 	{"[a-z][a-z0-9]", TK_RNAME}, // now only to indicate REGISTER NAME
