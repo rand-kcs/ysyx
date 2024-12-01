@@ -18,6 +18,17 @@
 
 #include <common.h>
 
+// ----------- IRINGBUFFER ----
+#define  RING_LEN 20
+typedef struct{
+	uint32_t index;
+	char ring_buf[RING_LEN][128];
+} IRingBuf;
+
+#ifdef CONFIG_IRINGBUF
+extern IRingBuf iring_buf;
+#endif
+
 // ----------- state -----------
 
 enum { NEMU_RUNNING, NEMU_STOP, NEMU_END, NEMU_ABORT, NEMU_QUIT };

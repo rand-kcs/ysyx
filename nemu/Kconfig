@@ -229,4 +229,8 @@ config MATCH_OUT
 	bool "Log Every Single Token Matchs"
 	default n
 
+config IRINGBUF
+	bool "Enable Iring buffer"
+	default n
+
 endmenu

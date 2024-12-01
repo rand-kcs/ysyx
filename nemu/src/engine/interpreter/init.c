@@ -16,6 +16,7 @@
 #include <cpu/cpu.h>
 
 void sdb_mainloop();
+void IRF_Log();
 
 void engine_start() {
 #ifdef CONFIG_TARGET_AM
@@ -23,5 +24,9 @@ void engine_start() {
 #else
   /* Receive commands from user. */
   sdb_mainloop();
+#ifdef CONFIG_IRINGBUF
+	IRF_Log(); 
+#endif
+
 #endif
 }
