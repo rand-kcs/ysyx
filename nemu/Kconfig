@@ -233,4 +233,12 @@ config IRINGBUF
 	bool "Enable Iring buffer"
 	default n
 
+config MTRACE
+	bool "Enable Mem trace"
+	default n
+
+config FTRACE
+	bool "Enable Function trace"
+	default n
+
 endmenu
