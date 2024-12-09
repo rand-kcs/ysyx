@@ -22,6 +22,8 @@
 #define Mr vaddr_read
 #define Mw vaddr_write
 
+void ftrace_judge(word_t, int, int, char*, word_t);
+
 enum {
   TYPE_I, TYPE_U, TYPE_S, TYPE_J, TYPE_R, TYPE_B,
   TYPE_N, // none
@@ -46,10 +48,13 @@ bool isUnsignedExt(uint32_t inst, int type){
 	return false;	
 }
 
-static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_t *imm, int type) {
+static void decode_operand(Decode *s, int *rd, int *rs1out, int* rs2out, word_t *src1, word_t *src2, word_t *imm, int type) {
   uint32_t i = s->isa.inst.val;
   int rs1 = BITS(i, 19, 15);
   int rs2 = BITS(i, 24, 20);
+	*rs1out = rs1;
+	*rs2out = rs2;
+
   *rd     = BITS(i, 11, 7);
   switch (type) {
     case TYPE_I: src1R();          if(isUnsignedExt(i, type)){immIU();}else{immI();} break;
@@ -69,12 +74,13 @@ static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_
 
 static int decode_exec(Decode *s) {
   int rd = 0;
+	int rs1 = 0, rs2 = 0;
   word_t src1 = 0, src2 = 0, imm = 0;
   s->dnpc = s->snpc;
 
 #define INSTPAT_INST(s) ((s)->isa.inst.val)
 #define INSTPAT_MATCH(s, name, type, ... /* execute body */ ) { \
-  decode_operand(s, &rd, &src1, &src2, &imm, concat(TYPE_, type)); \
+  decode_operand(s, &rd, &rs1, &rs2, &src1, &src2, &imm, concat(TYPE_, type)); \
   __VA_ARGS__ ; \
 }
 
@@ -122,8 +128,10 @@ static int decode_exec(Decode *s) {
   INSTPAT("0000000 ????? ????? 101 ????? 00100 11", srli   , I, R(rd) = src1 >> imm);
   INSTPAT("??????? ????? ????? 011 ????? 00100 11", sltiu  , I, R(rd) = src1 < imm ? 1 : 0);
 
-  INSTPAT("??????? ????? ????? 000 ????? 11001 11", jalr   , I, R(rd) = s->snpc, s->dnpc = src1 + imm;);
-  INSTPAT("??????? ????? ????? ??? ????? 11011 11", jal    , J, R(rd) = s->snpc, s->dnpc = s->pc + imm;);
+	// jalr  rd == 0 rs == 0x1(ra)  --> ret
+	// jalr / jal  rd == 0x1(ra) 	  --> call
+  INSTPAT("??????? ????? ????? 000 ????? 11001 11", jalr   , I, R(rd) = s->snpc, s->dnpc = src1 + imm; ftrace_judge(s->pc, rs1, rd, "R", s->dnpc));
+  INSTPAT("??????? ????? ????? ??? ????? 11011 11", jal    , J, R(rd) = s->snpc, s->dnpc = s->pc + imm; ftrace_judge(s->pc, rs1, rd, "I", s->dnpc));
 	
   INSTPAT("??????? ????? ????? 000 ????? 11000 11", beq    , B, if(src1 == src2) s->dnpc = s->pc + imm;);
   INSTPAT("??????? ????? ????? 001 ????? 11000 11", bne    , B, if(src1 != src2) s->dnpc = s->pc + imm;);

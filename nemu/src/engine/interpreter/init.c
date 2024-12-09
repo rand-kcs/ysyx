@@ -17,6 +17,7 @@
 
 void sdb_mainloop();
 void IRF_Log();
+void Ftrace_close();
 
 void engine_start() {
 #ifdef CONFIG_TARGET_AM
@@ -26,6 +27,10 @@ void engine_start() {
   sdb_mainloop();
 #ifdef CONFIG_IRINGBUF
 	IRF_Log(); 
+#endif
+
+#ifdef CONFIG_FTRACE
+	Ftrace_close();
 #endif
 
 #endif
