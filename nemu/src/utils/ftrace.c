@@ -17,6 +17,8 @@ char* SpaceCnt;
 char* ftrace(word_t);
 
 void FTrace_init(char* fileStr){
+	if(!fileStr)
+		return;
 #ifdef CONFIG_FTRACE
 	SpaceCnt = malloc(sizeof(char) * 1024);
 	SpaceCnt[0] = '\0';
@@ -101,7 +103,8 @@ void ftrace_judge(word_t pc, int rs1, int rd, char* type, word_t dnpc){
 		Log("%sret : %s @ 0x%08x\n", SpaceCnt, funcstr, dnpc);
 		return;
 	}
-	//Log("Normal jump inst.\n");
+	funcstr = ftrace(dnpc);
+	Log("Normal Jump to : %s @ 0x%08x\n", funcstr, dnpc);
 	return;	
 	
 #endif
