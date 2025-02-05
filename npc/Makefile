@@ -37,6 +37,14 @@ $(BIN): $(VSRCS) $(CSRCS) $(NVBOARD_ARCHIVE)
 	
 	
 VSRC=$(shell find -name "*.v" | grep -v "$(TOPNAME).v")
+CXXSRC=$(shell find ./csrc -name "*.cpp")
+CXXSRC+=$(shell find ./csrc -name "*.c")
+LDFLAGS= -lreadline 
+ 
+# For disasm
+LDFLAGS+= $(shell llvm-config --libs) 
+
+NEW_LDFLAGS = $(foreach flag,$(LDFLAGS),-LDFLAGS $(flag))
 
 all:
 	@echo "Write this Makefile by your self."
@@ -45,7 +53,14 @@ sim: $(BIN)
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	$^
 
-npc_sim:
-	$(VERILATOR) --cc --exe --build -j 0 -Wall -timing --trace-fst csrc/sim_main.cpp vsrc/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
+IMG:=
+MYCXXFLAGS= $(shell llvm-config --cxxflags) -fPIE -g -fpermissive
+NEW_CXXFLAGS= $(foreach flag,$(MYCXXFLAGS), -CFLAGS $(flag))
+
+run:
+	$(VERILATOR) --cc --exe --build -j 0 -Wall -timing --trace-fst $(NEW_LDFLAGS) $(NEW_CXXFLAGS)  $(CXXSRC)  vsrc/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
+	./build/Vtop  --log=logs/npc-logs.txt --diff=ref/riscv32-nemu-interpreter-so $(IMG) 
  
+clean:
+	rm -r build/
 include ../Makefile

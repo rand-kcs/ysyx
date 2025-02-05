@@ -82,6 +82,7 @@ void FTrace_init(char* fileStr){
 
 static int level;
 void ftrace_judge(word_t pc, int rs1, int rd, char* type, word_t dnpc){
+  level = 0;
 #ifdef CONFIG_FTRACE
 	SpaceCnt[0] = '\0';
 
@@ -111,20 +112,26 @@ void ftrace_judge(word_t pc, int rs1, int rd, char* type, word_t dnpc){
 }
 
 char* ftrace(word_t pos){
+  #ifdef CONFIG_FTRACE
+  
 	for(int i = 0; i < SymtabCnt; i++) {
 		if(ELF32_ST_TYPE(Symtab[i].st_info) == STT_FUNC && pos >= Symtab[i].st_value && pos < Symtab[i].st_value + Symtab[i].st_size){
 		return Strtab + Symtab[i].st_name;
 		}
 	}
 	Log("Not found Func at 0x%08x\n", pos);
+  #endif
 	return NULL;
 }
 
 void Ftrace_close(){
+  #ifdef CONFIG_FTRACE
+  
 	free(Strtab);
 	free(Shdrs);
 	free(Symtab);
 	free(SpaceCnt);
+  #endif /* ifdef CONFIG_FTRACE */
 }
 
 

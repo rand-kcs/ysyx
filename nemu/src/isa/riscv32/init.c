@@ -18,12 +18,24 @@
 
 // this is not consistent with uint8_t
 // but it is ok since we do not access the array directly
+// static const uint32_t img [] = {
+//   0x00000297,  // auipc t0,0
+//   0x00028823,  // sb  zero,16(t0)
+//   0x0102c503,  // lbu a0,16(t0)
+//   0x00100073,  // ebreak (used as nemu_trap)
+//   0xdeadbeef,  // some data
+// };
+
+// check jal valid;
 static const uint32_t img [] = {
-  0x00000297,  // auipc t0,0
-  0x00028823,  // sb  zero,16(t0)
-  0x0102c503,  // lbu a0,16(t0)
-  0x00100073,  // ebreak (used as nemu_trap)
-  0xdeadbeef,  // some data
+	0x00100093, // addi r1, r0, 1
+	0x00108113, // addi r2, r1, 1
+	0x0000a1b7, // lui x3, 10
+	0x00001217, // auipc x4, 1<<12
+	0x004002ef, // jal x5, 4
+	0x00428367, // jalr x6, 4(x5)
+	0x00100073, // ebreak;
+
 };
 
 static void restart() {

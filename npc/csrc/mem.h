@@ -1,20 +1,17 @@
+#include <cstdint>
 #define CONFIG_MBASE 0x80000000
+#define CONFIG_MSIZE 0x8000000
+#define RESET_VECTOR CONFIG_MBASE
 
 typedef uint32_t word_t;
 typedef uint32_t paddr_t;
+typedef uint32_t vaddr_t;
 
-uint32_t pmem[] = {
-	0x00100093, // addi r1, r0, 1
-	0x00108113, // addi r2, r1, 1
-	0x00100073,
-	0x000000,
-};
+extern uint32_t pmem[CONFIG_MSIZE];
 
-uint32_t* guest_to_host(paddr_t paddr) { return pmem +     (paddr - CONFIG_MBASE) / 4; }
+// pmem as pointer type, add 1 equals to add 4 in real place.
+uint32_t* guest_to_host(paddr_t paddr) ;
 //paddr_t host_to_guest(uint8_t *haddr) { return haddr     - pmem + CONFIG_MBASE; }
 
-word_t pmem_read(paddr_t addr) {
-  word_t ret = *guest_to_host(addr);
-  return ret;
-}
+word_t pmem_read(paddr_t addr);
  

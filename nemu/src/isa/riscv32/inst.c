@@ -146,10 +146,12 @@ static int decode_exec(Decode *s) {
 
   R(0) = 0; // reset $zero to 0
 
+  printf("NEMU decode_exec done jobs\n");
   return 0;
 }
 
 int isa_exec_once(Decode *s) {
   s->isa.inst.val = inst_fetch(&s->snpc, 4);
+  printf("NEMU EXCUTING: 0x%x\n", s->isa.inst.val);
   return decode_exec(s);
 }

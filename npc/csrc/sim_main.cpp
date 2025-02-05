@@ -2,20 +2,20 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <verilated.h>
+#include <cstdint>
+#include <cstddef>
 #include "Vtop.h"
 #include "mem.h"
+#include "utils.h"
 #include "svdpi.h"
 #include "Vtop__Dpi.h"
+#include "cpu.h"
 
 Vtop* tb;
 VerilatedContext* contextp;
-
-static void single_cycle() {
-	contextp->timeInc(1);
-  tb->clk = 0; tb->eval();
-	contextp->timeInc(1);
-  tb->clk = 1; tb->eval();
-}
+void init_monitor(int, char**);
+void sdb_main_loop();
+int is_exit_status_bad() ;
 
 static void reset(int n) {
   tb->rst = 1;
@@ -23,12 +23,6 @@ static void reset(int n) {
   tb->rst = 0;
 }
  
-void print_reg_status() {
-	for(int i = 0; i < 32; i++){
-		printf("r%d : 0x%08x\n", i, tb->rf_dbg[i]);
-	}
-}
-
 
 
 int main(int argc, char** argv){
@@ -39,7 +33,6 @@ int main(int argc, char** argv){
 	
 	// Verilator must compute traced signals
 	contextp->traceEverOn(true);
-
 	// Pass arguments so Verilated code can see them, e.g. $value$plusargs
 	// This need to be called berfore create any mode;
 	contextp->commandArgs(argc, argv);
@@ -54,20 +47,24 @@ int main(int argc, char** argv){
 
 	// Set Vtop's input;
 	reset(5);
+
+	init_monitor(argc, argv);
 	//Simulate until $finish
+
+	/*  Old npc exec logic
 	while(!contextp -> gotFinish()) {
-		tb->inst = pmem_read(tb->pc);
-		printf("INST: 0x%08x by pc: 0x%x \n", tb->inst, tb->pc);
-		single_cycle();
-		print_reg_status();
-		if(ebreakYes())
-			break;
+
 	} 
+  */
+
+	// SDB import
+	sdb_main_loop();
+
 	tb->final();
 	delete tb;
 
 
 	printf("Simulation Done.\n");
 	
-
+	return is_exit_status_bad();
 }

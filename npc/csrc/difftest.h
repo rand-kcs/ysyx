@@ -13,34 +13,18 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
-#include <isa.h>
-#include "local-include/reg.h"
+#ifndef __DIFFTEST_DEF_H__
+#define __DIFFTEST_DEF_H__
 
-const char *regs[] = {
-  "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
-  "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
-  "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
-  "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
-};
+#include <stdint.h>
 
+#define __EXPORT __attribute__((visibility("default")))
+enum { DIFFTEST_TO_DUT, DIFFTEST_TO_REF };
 
-void isa_reg_display() {
-	for(int i = 0; i < NR_GPR; i++) {
-		printf("REG[%s] : %x\n",regs[i], cpu.gpr[i]);
-	}
-  printf("PC: %x\n", cpu.pc);
-}
-
-word_t isa_reg_str2val(const char *s, bool *success) {
-	for(int i = 0; i < ARRLEN(regs); i++){
-		if(strcmp(regs[i], s) == 0)	
-			return cpu.gpr[i];
-	}
-	
-	if(strcmp(s, "pc") == 0) {
-		return cpu.pc;
-	}
-	
-	*success = false;
-	return 0;
-}
+#define RISCV_GPR_TYPE MUXDEF(CONFIG_RV64, uint64_t, uint32_t)
+#define RISCV_GPR_NUM  MUXDEF(CONFIG_RVE , 16, 32)
+#define DIFFTEST_REG_SIZE (sizeof(RISCV_GPR_TYPE) * (RISCV_GPR_NUM + 1)) // GPRs + pc
+                                                                         //
+                                                                         //
+void difftest_step(vaddr_t, vaddr_t);
+#endif //

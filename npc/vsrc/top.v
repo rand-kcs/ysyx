@@ -1,3 +1,11 @@
+`define NULL_TYPE 3'b000
+`define R_TYPE 3'b001
+`define I_TYPE 3'd2
+`define S_TYPE 3'd3
+`define B_TYPE 3'd4
+`define U_TYPE 3'd5
+`define J_TYPE 3'd6
+
 module top(
 		input clk,
 		input rst,
@@ -23,23 +31,42 @@ wire [31:0] src1;
 wire [31:0] src2;
 wire [31:0] wdata;
 wire [2:0] func3;
+wire [6:0] opcode;
+wire [2:0] funcEU;
+wire [1:0] amux1;
+wire [1:0] amux2;
 
+wire [31:0] aluout;
 
-PC_reg pc_reg(clk, rst, pc);
+wire [31:0] snpc;
+wire [31:0] dnpc;
+wire alu2wdata;
+
+assign snpc = pc + 4;
+
+MuxKeyWithDefault #(2, 1, 32) dnpcMKWD(dnpc, alu2wdata, 32'b0, {
+	1'b1, snpc,
+	1'b0, aluout
+});
+PC_reg pc_reg(clk, rst, dnpc, pc);
 
 // Decode Unit  -- RF -- EX   connected
 
-IDU idu (inst, rs1, rs2, rd, imm, wen, func3);
+IDU idu (inst, rs1, rs2, rd, imm, wen, func3, funcEU, amux1, amux2, opcode);
 
+assign alu2wdata = !(opcode === 7'b1101111 | opcode === 7'b1100111); // jal and jalr
+MuxKeyWithDefault #(2, 1, 32) wdataMKWD(wdata, alu2wdata, 32'b0, {
+	1'b1, aluout,
+	1'b0, snpc
+});
 RegisterFile #(5, 32) RF(clk, wdata, rd, wen, rs1, rs2, src1, src2, rf_dbg);
 
-ExecuteUnit eu(src1, imm, wdata);
+ExecuteUnit eu(src1, src2, imm, pc, funcEU, amux1, amux2, aluout);
 
 initial begin
 	$display("[%0t] Tracing to logs/vlt_dump.fst", $time);
 	$dumpfile("logs/vlt_dump.fst");
 	$dumpvars();
-	#50 $finish;
 end 
 
 export "DPI-C" function ebreakYes;
