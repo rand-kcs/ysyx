@@ -23,9 +23,20 @@ uint32_t get_pc(){
 
 static void trace_and_difftest() {
   /*---- Instruction Trace ---- */
+  #ifdef ITRACE
 	log_write("0x%08x : ", tb->pc);
-	log_write("0x%08x \n", tb->inst);
+	log_write("0x%08x ", tb->inst);
 
+  char p[1024];
+  memset(p, '\0', 1024);
+
+  void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
+  disassemble(p, sizeof(p),
+      tb->pc, (uint8_t *)&tb->inst, 4);
+
+  log_write(" %s\n",p);
+
+  #endif
   /*---- Difftest ------*/
   
 }
@@ -38,8 +49,10 @@ static void exec_once() {
 
 	single_cycle();
 
+  #ifdef DIFFTEST
   /* difftest */
   difftest_step(tb->pc, tb->pc);
+  #endif
 
 	if(ebreakYes()){
 		npc_state.state = NPC_END;

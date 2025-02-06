@@ -17,6 +17,7 @@
 #define __MACRO_H__
 
 #include <string.h>
+#include "options.h"
 
 // macro stringizing
 #define str_temp(x) #x

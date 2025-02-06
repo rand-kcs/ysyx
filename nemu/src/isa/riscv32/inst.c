@@ -146,7 +146,7 @@ static int decode_exec(Decode *s) {
 
   R(0) = 0; // reset $zero to 0
 
-  printf("NEMU decode_exec done jobs\n");
+  //printf("NEMU decode_exec done jobs\n");
   return 0;
 }
 
