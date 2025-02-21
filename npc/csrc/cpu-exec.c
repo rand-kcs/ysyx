@@ -35,6 +35,8 @@ static void trace() {
       tb->pc, (uint8_t *)&tb->inst, 4);
 
   log_write(" %s\n",p);
+  if(g_print_step) 
+		printf("sdb: 0x%08x : 0x%08x %s\n", tb->pc, tb->inst, p);
 
   #endif
   
@@ -93,8 +95,6 @@ void cpu_exec(uint64_t n) {
 
   //uint64_t timer_start = get_time();
 
-	if(n < MAX_INST_TO_PRINT)
-		printf("sdb: 0x%08x : 0x%08x \n", tb->pc, tb->inst);
   execute(n);
 
   //uint64_t timer_end = get_time();
