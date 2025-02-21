@@ -59,7 +59,7 @@ NEW_CXXFLAGS= $(foreach flag,$(MYCXXFLAGS), -CFLAGS $(flag))
 
 run:
 	$(VERILATOR) --cc --exe --build -j 0 -Wall -timing --trace-fst $(NEW_LDFLAGS) $(NEW_CXXFLAGS)  $(CXXSRC)  vsrc/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
-	./build/Vtop  --log=$(BUILD_DIR)/npc-logs.txt --diff=ref/riscv32-nemu-interpreter-so $(ARGS) $(IMG) 
+	./build/Vtop  --log=$(BUILD_DIR)/npc-log.txt --diff=ref/riscv32-nemu-interpreter-so $(ARGS) $(IMG) 
  
 clean:
 	rm -r build/

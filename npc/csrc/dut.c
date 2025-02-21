@@ -49,16 +49,16 @@ void init_difftest(char *ref_so_file, long img_size, int port) {
 bool isa_difftest_checkregs(CPU_state *ref) {
   for(int i = 0; i < RISCV_GPR_NUM; i++){
     if(ref->gpr[i] != tb->rf_dbg[i]) {
-       printf("Reg dont Match\n") ;
+       Log("Reg dont Match\n") ;
       return false;
     }
   }
   if(ref->pc != tb->pc){
-    printf("PC dont Match\n") ;
+    Log("PC dont Match\n") ;
     return false;
   }
 
-  printf("Diff Check Pass\n");
+  Log("Diff Check Pass\n");
   return true;
 }
 
