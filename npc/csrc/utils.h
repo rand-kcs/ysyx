@@ -3,6 +3,9 @@
 #include <cstdio>
 #include "mem.h"
 #define FMT_WORD  "0x%08" PRIx32
+
+extern "C" bool log_enable(); 
+
 #define Log(format, ...) \
      _Log(ANSI_FMT("[%s:%d %s] " format, ANSI_FG_BLUE) "\n", \
          __FILE__, __LINE__, __func__, ## __VA_ARGS__)
@@ -16,7 +19,6 @@
 #define log_write(...) \
   do { \
     extern FILE* log_fp; \
-    extern bool log_enable(); \
     if (log_enable()) { \
       fprintf(log_fp, __VA_ARGS__); \
       fflush(log_fp); \

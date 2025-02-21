@@ -21,7 +21,7 @@ uint32_t get_pc(){
 
 
 
-static void trace_and_difftest() {
+static void trace() {
   /*---- Instruction Trace ---- */
   #ifdef ITRACE
 	log_write("0x%08x : ", tb->pc);
@@ -37,7 +37,6 @@ static void trace_and_difftest() {
   log_write(" %s\n",p);
 
   #endif
-  /*---- Difftest ------*/
   
 }
 
@@ -45,7 +44,7 @@ static void trace_and_difftest() {
 static void exec_once() {
   //tb->inst = pmem_read(tb->pc);
 
-  trace_and_difftest();
+  trace();
 
 	single_cycle();
 
@@ -94,9 +93,9 @@ void cpu_exec(uint64_t n) {
 
   //uint64_t timer_start = get_time();
 
-  execute(n);
 	if(n < MAX_INST_TO_PRINT)
-		printf("0x%08x : 0x%08x \n", tb->pc, tb->inst);
+		printf("sdb: 0x%08x : 0x%08x \n", tb->pc, tb->inst);
+  execute(n);
 
   //uint64_t timer_end = get_time();
   g_timer = 1;

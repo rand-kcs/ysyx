@@ -14,6 +14,6 @@ void init_log(const char *log_file) {
   Log("Log is written to %s", log_file ? log_file : "stdout\n");
 }
 
-bool log_enable() {
+extern "C" bool log_enable() {
 		return true;
 }

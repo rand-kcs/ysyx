@@ -45,8 +45,6 @@ int main(int argc, char** argv){
 	svSetScope(scope);
 
 
-	// Set Vtop's input;
-	reset(5);
 
 	init_monitor(argc, argv);
 	//Simulate until $finish
@@ -56,6 +54,9 @@ int main(int argc, char** argv){
 
 	} 
   */
+
+	// Set Vtop's input;
+	reset(5);
 
 	// SDB import
 	sdb_main_loop();

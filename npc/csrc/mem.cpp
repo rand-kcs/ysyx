@@ -24,12 +24,12 @@ static inline bool in_pmem(paddr_t addr) {
   return addr - CONFIG_MBASE < CONFIG_MSIZE;
 }
 extern "C" int pmem_read(int addr) {
-  printf("[npc]: Reading addr 0x%08x\n", addr);
+  Log("[npc]: Reading addr 0x%08x\n", addr);
   if(in_pmem(addr)){
   word_t ret = *guest_to_host(addr);
   return ret;
   }else 
-    printf("OUT OF BOUND\n");
+    Log("PMEM OUT OF BOUND\n");
   return 0;
 }
 
