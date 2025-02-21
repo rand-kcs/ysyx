@@ -43,7 +43,7 @@ static void trace_and_difftest() {
 
 
 static void exec_once() {
-  tb->inst = pmem_read(tb->pc);
+  //tb->inst = pmem_read(tb->pc);
 
   trace_and_difftest();
 

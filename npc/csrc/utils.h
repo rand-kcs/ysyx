@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdint>
+#include <cstdio>
 #include "mem.h"
 #define FMT_WORD  "0x%08" PRIx32
 #define Log(format, ...) \

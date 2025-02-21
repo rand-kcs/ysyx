@@ -13,5 +13,5 @@ extern uint32_t pmem[CONFIG_MSIZE];
 uint32_t* guest_to_host(paddr_t paddr) ;
 //paddr_t host_to_guest(uint8_t *haddr) { return haddr     - pmem + CONFIG_MBASE; }
 
-word_t pmem_read(paddr_t addr);
+extern "C" int pmem_read(int addr);
  

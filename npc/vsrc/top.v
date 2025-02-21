@@ -9,15 +9,22 @@
 module top(
 		input clk,
 		input rst,
-		input [31:0] inst,
-		output [31:0] inst_dbg,
+		output reg [31:0] inst,
 		output [31:0] pc,
 		output [31:0] rf_dbg [31:0],
 		output [31:0] src2_solveWaring,
 		output [2:0]  func3_solveWarn
 );
 
-assign inst_dbg = inst;
+
+import "DPI-C" function int pmem_read(input int raddr);
+import "DPI-C" function void pmem_write(
+  input int waddr, input int wdata, input byte wmask);
+
+always @(*) begin
+  inst = pmem_read(pc);
+end
+
 assign src2_solveWaring = src2;
 assign func3_solveWarn = func3;
 
