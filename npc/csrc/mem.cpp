@@ -12,8 +12,13 @@ uint32_t pmem[CONFIG_MSIZE] = {
 	0x00001217, // auipc x4, 1<<12
 	0x004002ef, // jal x5, 4
 	0x00428367, // jalr x6, 4(x5)
+	0x00100093, // addi r1, r0, 1
   0x0002a383, //  lw x7, 0(x5)
-	0x00100073, // ebreak;
+  0x00029383, // lh x7, 0(x5)
+  0x00028383, // lb x7, 0(x5)
+  0x0002c383, // lbu x7, 0(x5)
+  0x0002d383, // lhu x7, 0(x5)
+  0x00100073, // ebreak;
 	0x000000,
 };
 
@@ -24,6 +29,16 @@ uint32_t* guest_to_host(paddr_t paddr) { return pmem +     (paddr - CONFIG_MBASE
 static inline bool in_pmem(paddr_t addr) {
   return addr - CONFIG_MBASE < CONFIG_MSIZE;
 }
+
+int pmem_read_trace(int addr) {
+  if(in_pmem(addr)){
+  word_t ret = *guest_to_host(addr);
+  return ret;
+  }else 
+    Log("PMEM OUT OF BOUND\n");
+  return 0;
+}
+
 extern "C" int pmem_read(int addr) {
   Log("[npc]: Reading addr 0x%08x\n", addr);
   if(in_pmem(addr)){

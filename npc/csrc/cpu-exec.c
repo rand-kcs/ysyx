@@ -25,18 +25,19 @@ static void trace() {
   /*---- Instruction Trace ---- */
   #ifdef ITRACE
 	log_write("0x%08x : ", tb->pc);
-	log_write("0x%08x ", tb->inst);
+  uint32_t cur_inst = pmem_read_trace(tb->pc);
+	log_write("0x%08x ", cur_inst);
 
   char p[1024];
   memset(p, '\0', 1024);
 
   void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
   disassemble(p, sizeof(p),
-      tb->pc, (uint8_t *)&tb->inst, 4);
+      tb->pc, (uint8_t *)&cur_inst, 4);
 
   log_write(" %s\n",p);
   if(g_print_step) 
-		printf("sdb: 0x%08x : 0x%08x     %s\n", tb->pc, tb->inst, p);
+		printf("sdb: 0x%08x : 0x%08x     %s\n", tb->pc, cur_inst, p);
 
   #endif
   

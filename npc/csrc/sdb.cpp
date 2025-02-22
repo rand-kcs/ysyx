@@ -130,7 +130,7 @@ static int cmd_x(char *args) {
 	}
 
 	for(int i = 0; i < N; i++) {
-		printf("0x%08x\n", pmem_read(address));
+		printf("0x%08x\n", pmem_read_trace(address));
 		address+=4;
 	}
 	return 0;

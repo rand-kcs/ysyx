@@ -12,9 +12,9 @@ void print_reg_status() {
 
 
 void single_cycle() {                      
-   contextp->timeInc(1);
    tb->clk = 0; tb->eval();
    contextp->timeInc(1);
    tb->clk = 1; tb->eval();
+   contextp->timeInc(1);
  }
 

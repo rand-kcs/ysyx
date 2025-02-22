@@ -16,3 +16,6 @@ uint32_t* guest_to_host(paddr_t paddr) ;
 extern "C" int pmem_read(int addr);
  
 extern "C" void pmem_write(int waddr, int wdata, char wmask);
+
+
+int pmem_read_trace(int addr) ;
