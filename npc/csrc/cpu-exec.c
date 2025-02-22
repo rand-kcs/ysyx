@@ -36,7 +36,7 @@ static void trace() {
 
   log_write(" %s\n",p);
   if(g_print_step) 
-		printf("sdb: 0x%08x : 0x%08x %s\n", tb->pc, tb->inst, p);
+		printf("sdb: 0x%08x : 0x%08x     %s\n", tb->pc, tb->inst, p);
 
   #endif
   
