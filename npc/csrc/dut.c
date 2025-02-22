@@ -49,7 +49,7 @@ void init_difftest(char *ref_so_file, long img_size, int port) {
 bool isa_difftest_checkregs(CPU_state *ref) {
   for(int i = 0; i < RISCV_GPR_NUM; i++){
     if(ref->gpr[i] != tb->rf_dbg[i]) {
-       Log("Reg dont Match\n") ;
+       Log("Reg dont Match! id: %d\ntb: 0x%08x\nref: 0x%08x", i, tb->rf_dbg[i], ref->gpr[i]) ;
       return false;
     }
   }
