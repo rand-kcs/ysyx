@@ -12,8 +12,7 @@ module top(
 		output reg [31:0] inst,
 		output [31:0] pc,
 		output [31:0] rf_dbg [31:0],
-		output [31:0] src2_solveWaring,
-		output [2:0]  func3_solveWarn
+		output [31:0] src2_solveWaring
 );
 
 
@@ -26,13 +25,14 @@ always @(*) begin
 end
 
 assign src2_solveWaring = src2;
-assign func3_solveWarn = func3;
 
 wire [4:0] rs1;
 wire [4:0] rs2;
 wire [4:0] rd;
 wire [31:0] imm;
 wire wen;
+wire valid;
+wire mem_wen;
 
 wire [31:0] src1;
 wire [31:0] src2;
@@ -49,6 +49,12 @@ wire [31:0] snpc;
 wire [31:0] dnpc;
 wire alu2wdata;
 
+wire [31:0] rdata;
+wire [31:0] rdata_w;
+
+wire [7:0] wmask;
+assign wmask = 8'b0;
+
 assign snpc = pc + 4;
 
 MuxKeyWithDefault #(2, 1, 32) dnpcMKWD(dnpc, alu2wdata, 32'b0, {
@@ -59,16 +65,24 @@ PC_reg pc_reg(clk, rst, dnpc, pc);
 
 // Decode Unit  -- RF -- EX   connected
 
-IDU idu (inst, rs1, rs2, rd, imm, wen, func3, funcEU, amux1, amux2, opcode);
+IDU idu (inst, rs1, rs2, rd, imm, wen, func3, funcEU, amux1, amux2, opcode, valid, mem_wen);
 
 assign alu2wdata = !(opcode === 7'b1101111 | opcode === 7'b1100111); // jal and jalr
-MuxKeyWithDefault #(2, 1, 32) wdataMKWD(wdata, alu2wdata, 32'b0, {
-	1'b1, aluout,
-	1'b0, snpc
+MuxKeyWithDefault #(3, 7, 32) wdataMKWD(wdata, opcode, aluout, {
+	7'b1101111, snpc,     //jal 
+	7'b1100111, snpc,     //jalr 
+  7'b0000011, rdata_w  // lw, lh, lb, ...
+
+  // unspecify opcode lead to default -- aluout
 });
+
 RegisterFile #(5, 32) RF(clk, wdata, rd, wen, rs1, rs2, src1, src2, rf_dbg);
 
 ExecuteUnit eu(src1, src2, imm, pc, funcEU, amux1, amux2, aluout);
+
+Mem memory(valid, aluout, mem_wen, aluout, wmask, 32'b0, rdata);
+
+RDATA_Processor rdata_processor(rdata, func3, rdata_w);
 
 initial begin
 	$display("[%0t] Tracing to logs/vlt_dump.fst", $time);

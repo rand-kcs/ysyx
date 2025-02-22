@@ -12,6 +12,7 @@ uint32_t pmem[CONFIG_MSIZE] = {
 	0x00001217, // auipc x4, 1<<12
 	0x004002ef, // jal x5, 4
 	0x00428367, // jalr x6, 4(x5)
+  0x0002a383, //  lw x7, 0(x5)
 	0x00100073, // ebreak;
 	0x000000,
 };
