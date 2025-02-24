@@ -13,13 +13,17 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
-#include <isa.h>
 
 /* We use the POSIX regex functions to process regular expressions.
  * Type 'man regex' for more information about POSIX regex functions.
  */
 #include <regex.h>
-#include <memory/paddr.h>
+#include <string.h>
+#include <stdlib.h>
+#include "mem.h"
+#include "utils.h"
+#include "macro.h"
+#include "cpu.h"
 #define MIN_PRIOR 0
 
 enum {
@@ -231,10 +235,12 @@ bool check_parentheses(int p, int q) {
 int find_main_operator(int p, int q) {
 	int op_pos = 0, op_prior = MIN_PRIOR;
 	int cur_prior;
+  int flag;
 	for(int i = p; i <= q; i++) {
 		switch (tokens[i].type){
 		case '(':
-				int flag = 1, j;
+      {
+				flag = 1; int j;
 				for(j = i+1; ; j++) {
 					 if(tokens[j].type =='(')	
 							flag++;
@@ -246,6 +252,7 @@ int find_main_operator(int p, int q) {
 				}
 				i = j;
 				break;
+      }
 		case TK_HEX:
 		case TK_DEC:
 		case TK_RNAME:	
@@ -303,7 +310,7 @@ uint32_t eval(int p, int q, bool* success) {
 			return ret_val;
 		}else if(op_type == TK_REF) {
 			uint32_t val1 = eval(op + 1, q, success);
-			return paddr_read(val1, 4);
+			return pmem_read(val1);
 		}else{
    		 uint32_t val1 = eval(p, op - 1, success);
    		 uint32_t val2 = eval(op + 1, q, success);

@@ -33,6 +33,12 @@ extern "C" bool log_enable();
    } \
  } while (0)
 
+
+#define panic(format, ...) Assert(0, format, ## __VA_ARGS__)
+
+#define TODO() panic("please implement me")
+
+
 // ----------- state -----------
 
 enum { NPC_RUNNING, NPC_STOP, NPC_END, NPC_ABORT, NPC_QUIT };

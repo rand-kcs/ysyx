@@ -19,6 +19,10 @@
 #include <string.h>
 #include "options.h"
 
+#ifndef word_t 
+typedef uint32_t word_t;
+#endif
+
 // macro stringizing
 #define str_temp(x) #x
 #define str(x) str_temp(x)

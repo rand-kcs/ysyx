@@ -7,6 +7,9 @@
 #include "utils.h"
 #define ARRLEN(arr) (int)(sizeof(arr) / sizeof(arr[0]))
 
+word_t expr(char *e, bool *success);
+
+
 static int is_batch_mode = false;
 
 /* todo
@@ -49,13 +52,13 @@ static int cmd_q(char *args) {
 
 static int cmd_info(char *args);
 static int cmd_x(char *args);
+static int cmd_p(char *args);
 
 #if 0
 static int cmd_help(char *args);
 
 
 
-static int cmd_p(char *args);
 static int cmd_w(char *args);
 static int cmd_d(char *args);
 #endif
@@ -70,8 +73,8 @@ static struct {
   { "q", "Exit NPC", cmd_q },
   { "info", "Print info about SUBCMD", cmd_info},
   { "x", "Scan N * 4 bytes for the given address", cmd_x},
+  { "p", "Print Value of the exprssion", cmd_p},
   //{ "help", "Display information about all supported commands", cmd_help },
-  //{ "p", "Print Value of the exprssion", cmd_p},
   //{ "w", "Whenever the value of the EXPR changes, stop it.", cmd_w},
   //{ "d", "Delete the certain WP specified by INDEX", cmd_d},
 
@@ -175,7 +178,6 @@ static int cmd_info(char *args) {
   return 0;
 }
 
-#if 0
 static int cmd_p(char *args) {
   /* extract the first argument */
   char *arg = strtok(NULL, " ");
@@ -207,6 +209,8 @@ static int cmd_p(char *args) {
   }
   return 0;
 }
+
+#if 0
 
 static int cmd_w(char *args) {
   /* extract the first argument */
