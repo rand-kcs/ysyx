@@ -33,6 +33,8 @@ module RegisterFile #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
 	//	1'b0 , 32'b0,
 	//	1'b1 , rf[rs2]
 	//});
+  assign src1 = rf[rs1];
+  assign src2 = rf[rs2];
 
   // For Debug:
 	assign dbg_rf = rf;	

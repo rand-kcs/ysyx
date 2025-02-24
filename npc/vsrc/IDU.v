@@ -11,7 +11,8 @@ module IDU (
 	output [1:0] amux2,
 	output [6:0] opcode,
   output valid,
-  output mem_wen
+  output mem_wen,
+  output [7:0] wmask
 );
 
 assign func3 = inst[14:12];
@@ -35,12 +36,13 @@ assign mem_wen = opcode === 7'b0100011 ;
 ImmGenerator immG(itype, inst, imm);
 
 // itype => funcEU X!   opcode => funcEU ( func3 or add )
-MuxKeyWithDefault # (5, 7, 3) funcEU_MKWD(funcEU, opcode, 3'b0, {
+MuxKeyWithDefault # (6, 7, 3) funcEU_MKWD(funcEU, opcode, 3'b0, {
 	7'b0010011, func3, // addi, subi, ...
   7'b1100111, 3'b0,  // Jalr
 	7'b0000011, 3'b0,  // LW, LH, LB...
   7'b0110111, 3'b0,  // lui
-  7'b0110111, 3'b0  // auipc
+  7'b0110111, 3'b0,  // auipc
+  7'b0100011, 3'b0   // sw, sh...
 });
 
 /*
@@ -50,12 +52,13 @@ MuxKeyWithDefault # (5, 7, 3) funcEU_MKWD(funcEU, opcode, 3'b0, {
   2'd2 ->  pc
   2'd3 ->  0
 */
-MuxKeyWithDefault # (6, 7, 2) amux1_MKWD(amux1, opcode, 2'b0, {
+MuxKeyWithDefault # (7, 7, 2) amux1_MKWD(amux1, opcode, 2'b0, {
 	7'b0110111, 2'd0, // lui asrc1 select 0 --U_type
 
 	7'b0010011, 2'd1, // Normal addi, subi, xori.., select src1 I-type
 	7'b1100111, 2'd1, // jalr, select reg src1  --I-type
   7'b0000011, 2'd1, // lw, lh, lb...
+  7'b0100011, 2'd1, // sw, sb, sh
 
 	7'b0010111, 2'd2, // auipc  select pc --U_Type
 	7'b1101111, 2'd2 // jal  select pc   --J_Type
@@ -69,13 +72,20 @@ MuxKeyWithDefault # (6, 7, 2) amux1_MKWD(amux1, opcode, 2'b0, {
   2'd3 ->  0
 */
 
-MuxKeyWithDefault # (6, 7, 2) amux2_MKWD(amux2, opcode, 2'b0, {
+MuxKeyWithDefault # (7, 7, 2) amux2_MKWD(amux2, opcode, 2'b0, {
 	7'b0110111, 2'd2, // lui asrc2 select imm
 	7'b0010011, 2'd2, // Normal addi, subi, xori.., select imm
   7'b1101111, 2'd2, // jal, select imm
 	7'b1100111, 2'd2, // jalr , select imm
 	7'b0010111, 2'd2,  // auipc  select imm
-  7'b0000011, 2'd2 // lw, lh, ...
+  7'b0000011, 2'd2,  // lw, lh, ...
+  7'b0100011, 2'd2   // sw, sh, sb
+});
+
+MuxKeyWithDefault # (3, 3, 8) wmask_MKWD(wmask, func3, 8'b0, {
+  3'h0, 8'h1,
+  3'h1, 8'h3,
+  3'h2, 8'hf
 });
 
 endmodule

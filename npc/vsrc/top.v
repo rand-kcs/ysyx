@@ -11,8 +11,7 @@ module top(
 		input rst,
 		output reg [31:0] inst,
 		output [31:0] pc,
-		output [31:0] rf_dbg [31:0],
-		output [31:0] src2_solveWaring
+		output [31:0] rf_dbg [31:0]
 );
 
 
@@ -24,7 +23,6 @@ always @(negedge clk) begin
   inst <= pmem_read(pc);
 end
 
-assign src2_solveWaring = src2;
 
 wire [4:0] rs1;
 wire [4:0] rs2;
@@ -53,7 +51,6 @@ wire [31:0] rdata;
 wire [31:0] rdata_w;
 
 wire [7:0] wmask;
-assign wmask = 8'b0;
 
 assign snpc = pc + 4;
 
@@ -65,7 +62,7 @@ PC_reg pc_reg(clk, rst, dnpc, pc);
 
 // Decode Unit  -- RF -- EX   connected
 
-IDU idu (inst, rs1, rs2, rd, imm, wen, func3, funcEU, amux1, amux2, opcode, valid, mem_wen);
+IDU idu (inst, rs1, rs2, rd, imm, wen, func3, funcEU, amux1, amux2, opcode, valid, mem_wen, wmask);
 
 assign alu2wdata = !(opcode === 7'b1101111 | opcode === 7'b1100111); // jal and jalr
 MuxKeyWithDefault #(3, 7, 32) wdataMKWD(wdata, opcode, aluout, {
@@ -74,13 +71,14 @@ MuxKeyWithDefault #(3, 7, 32) wdataMKWD(wdata, opcode, aluout, {
   7'b0000011, rdata_w  // lw, lh, lb, ...
 
   // unspecify opcode lead to default -- aluout
+  // ( the inst with wen)
 });
 
 RegisterFile #(5, 32) RF(clk, wdata, rd, wen, rs1, rs2, src1, src2, rf_dbg);
 
 ExecuteUnit eu(src1, src2, imm, pc, funcEU, amux1, amux2, aluout);
 
-Mem memory(valid, aluout, mem_wen, aluout, wmask, 32'b0, rdata);
+Mem memory(valid, aluout, mem_wen, aluout, wmask, src2, rdata);
 
 RDATA_Processor rdata_processor(rdata, func3, rdata_w);
 
