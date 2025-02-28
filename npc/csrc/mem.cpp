@@ -7,6 +7,8 @@
 
 uint32_t pmem[CONFIG_MSIZE] = {
 	0x00100093, // addi r1, r0, 1
+  0x0000b113, // sltiu x2, x1, 0
+  0x00108133, // add x2, x1, x1
 	0x00108113, // addi r2, r1, 1
 	0x0000a1b7, // lui x3, 10
 	0x00001217, // auipc x4, 1<<12

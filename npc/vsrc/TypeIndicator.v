@@ -3,7 +3,8 @@ module TypeIndicator (
 	output [2:0] itype
 );
 
-MuxKeyWithDefault #(7, 7, 3) mkwd(itype, opcode, `NULL_TYPE, {
+MuxKeyWithDefault #(8, 7, 3) mkwd(itype, opcode, `NULL_TYPE, {
+	7'b0110011, `R_TYPE,    // add, sub..
 	7'b0010011, `I_TYPE,    // imm, addi..
 	7'b1100111, `I_TYPE,    // Jalr
 	7'b0000011, `I_TYPE,    // LW, LH, LB...

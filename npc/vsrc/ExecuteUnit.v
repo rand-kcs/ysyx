@@ -3,7 +3,7 @@ module ExecuteUnit(
 	input [31:0] src2,
 	input [31:0] imm,
 	input [31:0] pc,
-	input [2:0] funcEU,
+	input [9:0] funcEU,
 	input [1:0] amux1,
 	input [1:0] amux2,
 	output [31:0] aluOut

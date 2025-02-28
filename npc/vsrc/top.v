@@ -37,7 +37,7 @@ wire [31:0] src2;
 wire [31:0] wdata;
 wire [2:0] func3;
 wire [6:0] opcode;
-wire [2:0] funcEU;
+wire [9:0] funcEU;
 wire [1:0] amux1;
 wire [1:0] amux2;
 
