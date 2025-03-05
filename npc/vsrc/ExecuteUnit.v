@@ -6,7 +6,7 @@ module ExecuteUnit(
 	input [9:0] funcEU,
 	input [1:0] amux1,
 	input [1:0] amux2,
-	output [31:0] aluOut
+	output [31:0] aluOut /*verilator public*/
 );
 	/*	
 		EU level : src1 and src2 refer to the rs1 rs2 GPR result;

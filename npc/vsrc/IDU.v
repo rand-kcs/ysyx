@@ -4,7 +4,7 @@ module IDU (
 	output [4:0] rs2,
 	output [4:0] rd,
 	output [31:0] imm,
-	output wen,
+	output wen /*verilator public*/,
 	output [2:0] func3,
 	output [9:0] funcEU,
 	output [1:0] amux1,
@@ -59,7 +59,7 @@ MuxKeyWithDefault # (2, 7, 10) funcEU_MKWD(funcEU, opcode, 10'b0, {
   2'd2 ->  pc
   2'd3 ->  0
 */
-MuxKeyWithDefault # (8, 7, 2) amux1_MKWD(amux1, opcode, 2'b0, {
+MuxKeyWithDefault # (9, 7, 2) amux1_MKWD(amux1, opcode, 2'b0, {
 	7'b0110111, 2'd0, // lui asrc1 select 0 --U_type
 
 	7'b0010011, 2'd1, // Normal addi, subi, xori.., select src1 I-type
@@ -69,7 +69,8 @@ MuxKeyWithDefault # (8, 7, 2) amux1_MKWD(amux1, opcode, 2'b0, {
   7'b0110011, 2'd1, // add, sub, ...
 
 	7'b0010111, 2'd2, // auipc  select pc --U_Type
-	7'b1101111, 2'd2 // jal  select pc   --J_Type
+	7'b1101111, 2'd2, // jal  select pc   --J_Type
+	7'b1100011, 2'd2 //  branch, select pc
 });
 
 /*
@@ -80,7 +81,7 @@ MuxKeyWithDefault # (8, 7, 2) amux1_MKWD(amux1, opcode, 2'b0, {
   2'd3 ->  0
 */
 
-MuxKeyWithDefault # (8, 7, 2) amux2_MKWD(amux2, opcode, 2'b0, {
+MuxKeyWithDefault # (9, 7, 2) amux2_MKWD(amux2, opcode, 2'b0, {
   7'b0110011, 2'd1, // add, sub, ...
 	7'b0110111, 2'd2, // lui asrc2 select imm
 	7'b0010011, 2'd2, // Normal addi, subi, xori.., select imm
@@ -88,7 +89,8 @@ MuxKeyWithDefault # (8, 7, 2) amux2_MKWD(amux2, opcode, 2'b0, {
 	7'b1100111, 2'd2, // jalr , select imm
 	7'b0010111, 2'd2,  // auipc  select imm
   7'b0000011, 2'd2,  // lw, lh, ...
-  7'b0100011, 2'd2   // sw, sh, sb
+  7'b0100011, 2'd2,  // sw, sh, sb
+  7'b1100011, 2'd2   // branch
 });
 
 MuxKeyWithDefault # (3, 3, 8) wmask_MKWD(wmask, func3, 8'b0, {
