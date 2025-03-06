@@ -10,15 +10,13 @@
 word_t expr(char *e, bool *success);
 
 
-static int is_batch_mode = false;
+static int is_batch_mode = true;
 
-/* todo
 void init_regex();
 void init_wp_pool();
 void new_wp(char*);
 void free_wp(int);
 void info_wp();
-*/
 
 
 /* We use the `readline' library to provide more flexibility to read from stdin. */
@@ -41,25 +39,25 @@ static char* rl_gets() {
 
 static int cmd_c(char *args) {
   cpu_exec(UINT_MAX);
-  return -1;
+  return 0;
 }
 
 static int cmd_si(char *args);
 static int cmd_q(char *args) {
-	npc_state.state = NPC_QUIT;
+	//npc_state.state = NPC_QUIT;
   return -1;
 }
 
 static int cmd_info(char *args);
 static int cmd_x(char *args);
 static int cmd_p(char *args);
+static int cmd_w(char *args);
 
 #if 0
 static int cmd_help(char *args);
 
 
 
-static int cmd_w(char *args);
 static int cmd_d(char *args);
 #endif
 
@@ -75,7 +73,7 @@ static struct {
   { "x", "Scan N * 4 bytes for the given address", cmd_x},
   { "p", "Print Value of the exprssion", cmd_p},
   //{ "help", "Display information about all supported commands", cmd_help },
-  //{ "w", "Whenever the value of the EXPR changes, stop it.", cmd_w},
+  { "w", "Whenever the value of the EXPR changes, stop it.", cmd_w},
   //{ "d", "Delete the certain WP specified by INDEX", cmd_d},
 
   /* TODO: Add more commands */
@@ -210,7 +208,6 @@ static int cmd_p(char *args) {
   return 0;
 }
 
-#if 0
 
 static int cmd_w(char *args) {
   /* extract the first argument */
@@ -237,6 +234,7 @@ static int cmd_w(char *args) {
   }
   return 0;
 }
+#if 0
 
 static int cmd_d(char *args) {
   /* extract the first argument */
@@ -301,10 +299,10 @@ void sdb_main_loop() {
 }
 
 
-//void init_sdb() {
-//  /* Compile the regular expressions. */
-//  init_regex();
-//
-//  /* Initialize the watchpoint pool. */
-//  //init_wp_pool();
-//}
+void init_sdb() {
+  /* Compile the regular expressions. */
+  init_regex();
+
+  /* Initialize the watchpoint pool. */
+  init_wp_pool();
+}

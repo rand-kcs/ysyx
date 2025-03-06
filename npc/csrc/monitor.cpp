@@ -13,9 +13,8 @@
 #endif
 
 //extern uint32_t *pmem;
-word_t *guest_to_host(word_t);
 void init_log(const char*);
-void init_regex();
+void init_sdb();
 
 static char* log_file = NULL;
 static char *img_file = NULL;
@@ -28,6 +27,7 @@ void init_disasm(const char *triple);
 static long load_img() {
   if (img_file == NULL) {
     Log("No image is given. Use the default build-in image.\n");
+    load_default_img();
     return 4096; // built-in image size
   }
 
@@ -93,6 +93,8 @@ void init_monitor(int argc, char **argv) {
 	/* open log file */
 	init_log(log_file);
 
+  // Init ISA -- pc, default img set
+
   /* Load the image to memory. This will overwrite the built-in image. */
   long img_size = load_img();
 
@@ -106,5 +108,5 @@ void init_monitor(int argc, char **argv) {
   init_difftest(ref_so_file, img_size, difftest_port);
   #endif
 
-  init_regex();
+  init_sdb();
 }

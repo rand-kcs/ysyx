@@ -40,7 +40,8 @@ static void trace() {
       tb->pc, (uint8_t *)&cur_inst, 4);
 
   log_write(" %s\n",p);
-  if(g_print_step) 
+  // if(g_print_step) 
+  // change to always print 
 		printf("sdb: 0x%08x : 0x%08x     %s\n", tb->pc, cur_inst, p);
 
   #endif
@@ -54,14 +55,21 @@ static void exec_once() {
   trace();
 
 	single_cycle();
-  printf("Test ALU_imm_input: 0x%08x\n", tb->top->eu->imm);
-  print_reg_status();
+  //printf("Test ALU_imm_input: 0x%08x\n", tb->top->eu->imm);
+  //print_reg_status();
   //printf("Test IDU_Wen: 0x%08x\n", tb->top->idu->wen);
+
+
+  // WatchPoint Trigger
+	if(WP_trigger()){
+		npc_state.state = NPC_STOP;	
+	}
 
   #ifdef DIFFTEST
   /* difftest */
   difftest_step(tb->pc, tb->pc);
   #endif
+
 
 	if(ebreakYes()){
 		npc_state.state = NPC_END;
