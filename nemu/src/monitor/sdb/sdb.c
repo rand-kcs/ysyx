@@ -138,7 +138,10 @@ static int cmd_x(char *args) {
 	}
 
 	for(int i = 0; i < N; i++) {
-		printf("0x%08x\n", paddr_read(address, 4));
+		printf("0x%02x", paddr_read(address, 1));
+		printf(" %02x", paddr_read(address + 1, 1));
+		printf(" %02x", paddr_read(address + 2, 1));
+		printf(" %02x\n", paddr_read(address + 3, 1));
 		address+=4;
 	}
 	return 0;

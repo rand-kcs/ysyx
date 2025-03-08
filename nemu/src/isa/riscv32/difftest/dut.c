@@ -19,8 +19,10 @@
 
 bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
 	for(int i = 0; i < NR_GPR; i++)	{
-		if(ref_r->gpr[i] != cpu.gpr[i])
-  	return false;
+		if(ref_r->gpr[i] != cpu.gpr[i]){
+      Log("Reg[%s] dont Match!\n  ref:0x%08x\n  dut:0x%08x\n", reg_name(i), ref_r->gpr[i], cpu.gpr[i]);
+  	  return false;
+    }
 	}
 	return true;
 }

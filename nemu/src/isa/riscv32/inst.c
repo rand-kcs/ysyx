@@ -17,6 +17,7 @@
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
 #include <cpu/decode.h>
+#include <memory/paddr.h>
 
 #define R(i) gpr(i)
 #define Mr vaddr_read
@@ -66,9 +67,10 @@ static void decode_operand(Decode *s, int *rd, int *rs1out, int* rs2out, word_t 
   }
 
 	// Special case for srai : msp extends;
-	if(type == TYPE_I && BITS(i, 14, 12) == 0x5 && BITS(i, 31, 25) == 0x20){
-		immIUL4();
-	}
+  // ERROR!!!!
+	// if(type == TYPE_I && BITS(i, 14, 12) == 0x5 && BITS(i, 31, 25) == 0x20){
+	// 	immIUL4();
+	// }
 	
 }
 
@@ -125,7 +127,7 @@ static int decode_exec(Decode *s) {
 	//Notes: This inst need a low 4 unsigned extend, but the high 7 bits would be zero, so it works fine.
   INSTPAT("0000000 ????? ????? 001 ????? 00100 11", slli   , I, R(rd) = src1 << imm);
   //INSTPAT("0000000 ????? ????? 101 ????? 00100 11", srli   , I, R(rd) = src1 >> imm);
-  INSTPAT("0100000 ????? ????? 101 ????? 00100 11", srai   , I, R(rd) = (int32_t)src1 >> imm);
+  INSTPAT("0100000 ????? ????? 101 ????? 00100 11", srai   , I, R(rd) = (int32_t)src1 >> BITS(imm, 4,0));
   INSTPAT("0000000 ????? ????? 101 ????? 00100 11", srli   , I, R(rd) = src1 >> imm);
   INSTPAT("??????? ????? ????? 011 ????? 00100 11", sltiu  , I, R(rd) = src1 < imm ? 1 : 0);
 
@@ -153,6 +155,6 @@ static int decode_exec(Decode *s) {
 
 int isa_exec_once(Decode *s) {
   s->isa.inst.val = inst_fetch(&s->snpc, 4);
-  printf("NEMU EXCUTING: 0x%08x\n", s->isa.inst.val);
+  //printf("NEMU EXCUTING: 0x%08x\n", s->isa.inst.val);
   return decode_exec(s);
 }
