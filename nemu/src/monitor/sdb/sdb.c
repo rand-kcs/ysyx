@@ -206,11 +206,11 @@ static int cmd_p(char *args) {
 		}
 
 		uint32_t ret_val = expr(cmd_expr, &success);
-		free(cmd_expr);
 		if(!success) {
-			printf("Non-valid Expression: %s\n", arg);
+			printf("Non-valid Expression: %s\n", cmd_expr);
 			return 0;
 		}
+		free(cmd_expr);
 		arg = strtok(NULL, " ");
 		printf("Hex: 0x%x\n", ret_val);
 		printf("Dec: %u\n", ret_val);
