@@ -44,7 +44,7 @@ void *malloc(size_t size) {
   int align = 1;
   for(; align <= size; align*=2); 
   align /= 2;
-  while (align && (uint32_t)current_heap % align) {
+  while (align && (uintptr_t)current_heap % align) {
     current_heap++;
   }
   void* my_alloc = current_heap; 
