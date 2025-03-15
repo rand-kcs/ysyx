@@ -53,6 +53,12 @@ int vsprintf(char *out, const char *fmt, va_list ap) {
               c = (char) va_arg(ap, int);
               s = ctos(tmp, c);
               break;
+          case 'x':              /* char */
+              /* need a cast here since va_arg only
+                  takes fully promoted types */
+              d = (uint32_t) va_arg(ap, int);
+              s = itohs(tmp, d);
+              break;
           default:
               printf("%s You havenot implement this\n", fmt);
               panic("Error");

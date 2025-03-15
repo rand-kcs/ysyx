@@ -112,6 +112,15 @@ char* itos(char* dst, int src){
 		return dst;
 }
 
-
+// 将整数转换为十六进制字符串的函数
+char* itohs(char* buffer, int value) {
+    const char* hexDigits = "0123456789ABCDEF"; // 十六进制数字
+    for (int i = 7; i >= 0; i--) { // 处理每一个四位的十六进制位
+        buffer[i] = hexDigits[value & 0xF]; // 取出最低四位并找到对应的十六进制字符
+        value >>= 4; // 将数值右移四位
+    }
+    buffer[8] = '\0'; // 添加字符串终止符
+    return buffer;
+}
 
 #endif
