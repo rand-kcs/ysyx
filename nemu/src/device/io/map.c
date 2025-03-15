@@ -17,7 +17,6 @@
 #include <memory/host.h>
 #include <memory/vaddr.h>
 #include <device/map.h>
-
 #define IO_SPACE_MAX (2 * 1024 * 1024)
 
 static uint8_t *io_space = NULL;
@@ -53,6 +52,9 @@ void init_map() {
 }
 
 word_t map_read(paddr_t addr, int len, IOMap *map) {
+  #ifdef CONFIG_DTRACE
+  log_write("Reading IO Device: %s with paddr: 0x%08x, len: %d", map->name, addr, len);
+  #endif
   assert(len >= 1 && len <= 8);
   check_bound(map, addr);
   paddr_t offset = addr - map->low;
@@ -62,6 +64,9 @@ word_t map_read(paddr_t addr, int len, IOMap *map) {
 }
 
 void map_write(paddr_t addr, int len, word_t data, IOMap *map) {
+  #ifdef CONFIG_DTRACE
+  log_write("Wrting IO Device: %s with paddr: 0x%08x, len: %d, data: 0x%08x", map->name, addr, len, data);
+  #endif
   assert(len >= 1 && len <= 8);
   check_bound(map, addr);
   paddr_t offset = addr - map->low;
