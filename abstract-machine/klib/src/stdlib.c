@@ -38,17 +38,23 @@ void *malloc(size_t size) {
 #if !(defined(__ISA_NATIVE__) && defined(__NATIVE_USE_KLIB__))
   //panic("Not implemented");
 #endif
-  if(!heap_init) current_heap = heap.start;
+  if(!heap_init){
+   current_heap = heap.start;
+    heap_init = true;
+  }
 
 
   int align = 1;
   for(; align <= size; align*=2); 
   align /= 2;
+  if(align > 8) align = 8;
   while (align && (uintptr_t)current_heap % align) {
     current_heap++;
   }
   void* my_alloc = current_heap; 
   current_heap += size;
+
+  //printf("needed size: %d, alloc ptr pos: %x\n", size, my_alloc);
   return my_alloc;
 }
 
