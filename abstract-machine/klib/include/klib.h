@@ -24,6 +24,7 @@ int    strcmp    (const char *s1, const char *s2);
 int    strncmp   (const char *s1, const char *s2, size_t n);
 char* ctos(char* dst, char src);
 char* itos(char* dst, int src);
+char* itohs(char* dst, int src);
 
 // stdlib.h
 void   srand     (unsigned int seed);
