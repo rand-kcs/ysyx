@@ -88,9 +88,9 @@ Mem memory(valid, aluout, mem_wen, aluout, wmask, src2, rdata);
 RDATA_Processor rdata_processor(rdata, func3, rdata_w);
 
 initial begin
-	$display("[%0t] Tracing to logs/vlt_dump.fst", $time);
-	$dumpfile("logs/vlt_dump.fst");
-	$dumpvars();
+	$display("[%0t]Not Tracing to logs/vlt_dump.fst", $time);
+	//$dumpfile("logs/vlt_dump.fst");
+	//$dumpvars();
 end 
 
 export "DPI-C" function ebreakYes;
