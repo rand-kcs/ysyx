@@ -73,3 +73,4 @@ extern NPCState npc_state;
 
 #define ANSI_FMT(str, fmt) fmt str ANSI_NONE
 
+uint64_t get_time();

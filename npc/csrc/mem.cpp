@@ -5,6 +5,7 @@
 #include "mem.h"
 #include "utils.h"
 
+
 uint32_t img [] = {
 	0x00100093, // addi r1, r0, 1
   0x0000b113, // sltiu x2, x1, 0
@@ -56,14 +57,33 @@ int pmem_read_trace(int addr) {
   return 0;
 }
 
+static uint32_t *rtc_port_base[2];
 extern "C" int pmem_read(int addr) {
-  Log("[npc]: Reading addr 0x%08x\n", addr);
+  log_write("[npc]: Reading addr 0x%08x\n", addr);
+
+  if(addr == RTC_ADDR){
+    uint64_t us = get_time();
+    rtc_port_base[0] = (uint32_t)us;
+    rtc_port_base[1] = us >> 32;
+    return rtc_port_base[0];
+  }
+
+  if(addr == RTC_ADDR + 4){
+    uint64_t us = get_time();
+    rtc_port_base[0] = (uint32_t)us;
+    rtc_port_base[1] = us >> 32;
+    return rtc_port_base[1];
+  }
+
   if(in_pmem(addr)){
-  word_t ret = *(uint32_t*)guest_to_host(addr);
-  return ret;
-  }else 
-    Log("PMEM OUT OF BOUND\n");
-  return 2;
+    word_t ret = *(uint32_t*)guest_to_host(addr);
+    return ret;
+  }
+
+  // npc Write along with read;
+  log_write("PMEM OUT OF BOUND\n");
+  
+  return 0;
 }
 
 extern "C" void pmem_write(int waddr, int wdata, char wmask) {
@@ -71,6 +91,11 @@ extern "C" void pmem_write(int waddr, int wdata, char wmask) {
   // `wmask`中每比特表示`wdata`中1个字节的掩码,
   // 如`wmask = 0x3`代表只写入最低2个字节, 内存中的其它字节保持不变
   //
+  if(waddr == SERIAL_PORT){
+    Assert(wmask == 0x1, "Writing more than char at once");
+    putchar(wdata);
+    return;
+  }
   switch (wmask) {
     case 0x1:
     *(uint8_t*)guest_to_host(waddr) = wdata;
