@@ -240,5 +240,9 @@ config MTRACE
 config FTRACE
 	bool "Enable Function trace"
 	default n
+  
+config DTRACE
+	bool "Enable Device trace"
+	default n
 
 endmenu
