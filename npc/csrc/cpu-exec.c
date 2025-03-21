@@ -42,7 +42,7 @@ static void trace() {
   log_write(" %s\n",p);
   // if(g_print_step) 
   // change to always print 
-		printf("sdb: 0x%08x : 0x%08x     %s\n", tb->pc, cur_inst, p);
+	//printf("sdb: 0x%08x : 0x%08x     %s\n", tb->pc, cur_inst, p);
 
   #endif
   
