@@ -16,8 +16,9 @@ char* SpaceCnt;
 
 char* ftrace(word_t);
 
+static int ftrace_table_sta = 0;
 void FTrace_init(char* fileStr){
-	if(!fileStr)
+	if(fileStr == NULL)
 		return;
 #ifdef CONFIG_FTRACE
 	SpaceCnt = malloc(sizeof(char) * 1024);
@@ -77,6 +78,7 @@ void FTrace_init(char* fileStr){
 
 	free(trash);
 	fclose(fp);
+  ftrace_table_sta = 1;
 #endif
 }
 
@@ -84,53 +86,57 @@ static int level;
 void ftrace_judge(word_t pc, int rs1, int rd, char* type, word_t dnpc){
   level = 0;
 #ifdef CONFIG_FTRACE
-	SpaceCnt[0] = '\0';
+  if(ftrace_table_sta){
+    SpaceCnt[0] = '\0';
 
-	char* funcstr;
-	// JAL/JALR	 rd == ra --> call
-	if(rd == 0x1){
-		funcstr = ftrace(dnpc);
-		for(int i = 0; i < level; i++) strcat(SpaceCnt, "\t");
-		Log("%scall: %s @ 0x%08x\n", SpaceCnt, funcstr, dnpc);
-		level++;
-		return;
-	}
+    char* funcstr;
+    // JAL/JALR	 rd == ra --> call
+    if(rd == 0x1){
+      funcstr = ftrace(dnpc);
+      for(int i = 0; i < level; i++) strcat(SpaceCnt, "\t");
+      Log("%scall: %s @ 0x%08x\n", SpaceCnt, funcstr, dnpc);
+      level++;
+      return;
+    }
 
-	// JALR  rd == 0 rs == ra -->ret
-	if(strcmp(type, "R") == 0 && rs1 == 0x1 && rd ==0){
-		funcstr = ftrace(pc);
-		level--;
-		for(int i = 0; i < level; i++) strcat(SpaceCnt, "\t");
-		Log("%sret : %s @ 0x%08x\n", SpaceCnt, funcstr, dnpc);
-		return;
-	}
-	funcstr = ftrace(dnpc);
-	Log("Normal Jump to : %s @ 0x%08x\n", funcstr, dnpc);
-	return;	
+    // JALR  rd == 0 rs == ra -->ret
+    if(strcmp(type, "R") == 0 && rs1 == 0x1 && rd ==0){
+      funcstr = ftrace(pc);
+      level--;
+      for(int i = 0; i < level; i++) strcat(SpaceCnt, "\t");
+      Log("%sret : %s @ 0x%08x\n", SpaceCnt, funcstr, dnpc);
+      return;
+    }
+    funcstr = ftrace(dnpc);
+    Log("Normal Jump to : %s @ 0x%08x\n", funcstr, dnpc);
+    return;	
+  }
 	
 #endif
 }
 
 char* ftrace(word_t pos){
   #ifdef CONFIG_FTRACE
-  
-	for(int i = 0; i < SymtabCnt; i++) {
-		if(ELF32_ST_TYPE(Symtab[i].st_info) == STT_FUNC && pos >= Symtab[i].st_value && pos < Symtab[i].st_value + Symtab[i].st_size){
-		return Strtab + Symtab[i].st_name;
-		}
-	}
-	Log("Not found Func at 0x%08x\n", pos);
+  if(ftrace_table_sta) {
+    for(int i = 0; i < SymtabCnt; i++) {
+      if(ELF32_ST_TYPE(Symtab[i].st_info) == STT_FUNC && pos >= Symtab[i].st_value && pos < Symtab[i].st_value + Symtab[i].st_size){
+      return Strtab + Symtab[i].st_name;
+      }
+    }
+    Log("Not found Func at 0x%08x\n", pos);
+  }
   #endif
 	return NULL;
 }
 
 void Ftrace_close(){
   #ifdef CONFIG_FTRACE
-  
-	free(Strtab);
-	free(Shdrs);
-	free(Symtab);
-	free(SpaceCnt);
+  if(ftrace_table_sta) {
+    free(Strtab);
+    free(Shdrs);
+    free(Symtab);
+    free(SpaceCnt);
+  }
   #endif /* ifdef CONFIG_FTRACE */
 }
 
