@@ -266,7 +266,9 @@ int find_main_operator(int p, int q) {
 uint32_t eval(int p, int q, bool* success) {
   if (p > q) {
     /* Bad expression */
-		Assert(0, "Bad Expression with p:%d and q:%d\n", p, q);
+		printf("Bad Expression with p:%d and q:%d\n", p, q);
+    *success = false;
+    return 0;
   }
   else if (p == q) {
     /* Single token.
@@ -294,7 +296,7 @@ uint32_t eval(int p, int q, bool* success) {
 		if(op_type == TK_NEG) {
 			return -eval(op+1, q, success);
 		}else if(op_type == TK_REG) {
-			Assert(tokens[op+1].type == TK_RNAME, "$ Unmatch");
+			if(!(tokens[op+1].type == TK_RNAME)){printf("$ reg not found(or zero reg)\n"); *success = false;return 0;}
 			uint32_t ret_val = isa_reg_str2val(tokens[op+1].str, success);
 			if(!(*success)){
 				Log("%s: Can't find Register with name: %s\n", ANSI_FMT("ERROR", ANSI_FG_RED), tokens[op+1].str);
