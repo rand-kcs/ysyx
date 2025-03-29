@@ -37,6 +37,7 @@ run: run-env preprocess
 	$(call git_commit, "run NEMU")
 	$(NEMU_EXEC)
 
+gdb: CFLAGS+= -g -O0
 gdb: run-env
 	$(call git_commit, "gdb NEMU")
 	gdb -s $(BINARY) --args $(NEMU_EXEC)
