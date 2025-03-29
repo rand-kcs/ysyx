@@ -25,6 +25,8 @@
 typedef struct {
   word_t gpr[NR_GPR];
   vaddr_t pc;
+  word_t mcause, mstatus, mepc;
+  word_t mtvec;
 } MUXDEF(CONFIG_RV64, riscv64_CPU_state, riscv32_CPU_state);
 
 // decode

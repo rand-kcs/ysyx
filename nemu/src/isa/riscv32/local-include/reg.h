@@ -17,6 +17,7 @@
 #define __RISCV_REG_H__
 
 #include <common.h>
+#include <isa.h>
 
 static inline int check_reg_idx(int idx) {
   IFDEF(CONFIG_RT_CHECK, assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32)));
@@ -29,5 +30,26 @@ static inline const char* reg_name(int idx) {
   extern const char* regs[];
   return regs[check_reg_idx(idx)];
 }
+
+static inline word_t* SR(int i){
+  switch (i) {
+    case 0x300:
+      return &(cpu.mstatus);
+    case 0x305:
+      return &(cpu.mtvec);
+    case 0x341:
+      return &(cpu.mepc);
+    case 0x342:
+      return &(cpu.mcause);
+    default:
+      panic("Non exist Staus Register.");
+  }
+}
+enum {
+  EVENT_NULL = 0,
+  EVENT_YIELD, EVENT_SYSCALL, EVENT_PAGEFAULT, EVENT_ERROR,
+  EVENT_IRQ_TIMER, EVENT_IRQ_IODEV,
+};
+
 
 #endif
