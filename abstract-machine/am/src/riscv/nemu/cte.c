@@ -1,6 +1,8 @@
 #include <am.h>
 #include <riscv/riscv.h>
 #include <klib.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 static Context* (*user_handler)(Event, Context*) = NULL;
 
@@ -34,8 +36,14 @@ bool cte_init(Context*(*handler)(Event, Context*)) {
   return true;
 }
 
+#define XLEN 4
+#define CONTEXT_SIZE  ((NR_REGS + 3) * XLEN)
 Context *kcontext(Area kstack, void (*entry)(void *), void *arg) {
-  return NULL;
+  Context* context = (Context*) (kstack.end - CONTEXT_SIZE);
+  context->gpr[2] = (uintptr_t) context;
+  context->gpr[10] = (uintptr_t) arg;
+  context->mepc = (uint32_t)entry;
+  return  context;
 }
 
 void yield() {
