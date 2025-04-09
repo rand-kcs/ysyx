@@ -245,4 +245,8 @@ config DTRACE
 	bool "Enable Device trace"
 	default n
 
+config ETRACE
+	bool "Enable Exception trace"
+	default n
+
 endmenu
