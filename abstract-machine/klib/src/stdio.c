@@ -59,8 +59,15 @@ int vsprintf(char *out, const char *fmt, va_list ap) {
               d = (uint32_t) va_arg(ap, int);
               s = itohs(tmp, d);
               break;
+          case 'l':
+            if(*(fmt+1) == 'd'){
+              fmt++;
+              d =  va_arg(ap, long int);
+              s = itos(tmp, d);
+              break;
+            }
           default:
-              printf("%s You havenot implement this\n", fmt);
+              printf("%s You havenot implement this placeholder, ah\n", fmt);
               panic("Error");
               return -1;
           }
