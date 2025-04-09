@@ -12,7 +12,10 @@ module IDU (
 	output [6:0] opcode,
   output valid,
   output mem_wen,
-  output [7:0] wmask
+  output [7:0] wmask,
+
+  output [11:0] csr_addr,
+  output csr_wen,
 );
 
 assign func3 = inst[14:12];
@@ -40,6 +43,9 @@ TypeIndicator typeIc (opcode, itype);
 assign wen =  itype === `I_TYPE | itype === `U_TYPE | itype === `J_TYPE | itype ===`R_TYPE;
 assign valid = opcode === 7'b0000011 | opcode === 7'b0100011; // load and store
 assign mem_wen = opcode === 7'b0100011 ;
+
+assign csr_addr = inst[31:20];
+assign csr_wen = opcode === 7'b1110011 ;
 
 
 // Make Immgen
