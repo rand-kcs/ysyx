@@ -7,14 +7,19 @@
 static Context* (*user_handler)(Event, Context*) = NULL;
 
 Context* __am_irq_handle(Context *c) {
-  for(int i = 0; i < 32; i++)
-    printf("GPR[%d]: 0x%08x\n", i, c->gpr[i]);
+  // for(int i = 0; i < 32; i++)
+  //   printf("GPR[%d]: 0x%08x\n", i, c->gpr[i]);
 
   if (user_handler) {
     Event ev = {0};
     switch (c->mcause) {
-      case 1: c->mepc += 4;
-      default: ev.event = c->mcause; break;
+      case 0xb:
+        if(c->gpr[17] == -1){
+          c->mepc += 4;
+          ev.event = EVENT_YIELD;
+          break;
+        }
+      default: ev.event = EVENT_ERROR; break;
     }
 
     c = user_handler(ev, c);
@@ -42,7 +47,7 @@ Context *kcontext(Area kstack, void (*entry)(void *), void *arg) {
   Context* context = (Context*) (kstack.end - CONTEXT_SIZE);
   context->gpr[2] = (uintptr_t) context;
   context->gpr[10] = (uintptr_t) arg;
-  context->mepc = (uint32_t)entry;
+  context->mepc = (uintptr_t)entry;
   return  context;
 }
 
