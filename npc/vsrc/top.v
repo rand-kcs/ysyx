@@ -54,6 +54,11 @@ wire [7:0] wmask;
 wire ben; // Branch Enable
 wire jen; // Jump Enable
 
+wire [11:0] csr_addr;
+wire csr_wen;
+wire [31:0] csr_out;
+
+
 assign snpc = pc + 4;
 
 
@@ -65,7 +70,7 @@ PC_reg pc_reg(clk, rst, dnpc, pc);
 
 // Decode Unit  -- RF -- EX   connected
 
-IDU idu (inst, rs1, rs2, rd, imm, wen, func3, funcEU, amux1, amux2, opcode, valid, mem_wen, wmask);
+IDU idu (inst, rs1, rs2, rd, imm, wen, func3, funcEU, amux1, amux2, opcode, valid, mem_wen, wmask, csr_addr, csr_wen);
 assign jen = (opcode === 7'b1101111 | opcode === 7'b1100111); // jal and jalr
 
 MuxKeyWithDefault #(3, 7, 32) wdataMKWD(wdata, opcode, aluout, {
@@ -80,6 +85,7 @@ MuxKeyWithDefault #(3, 7, 32) wdataMKWD(wdata, opcode, aluout, {
 RegisterFile #(5, 32) RF(clk, wdata, rd, wen, rs1, rs2, src1, src2, rf_dbg);
 
 ExecuteUnit eu(src1, src2, imm, pc, funcEU, amux1, amux2, aluout);
+CSRs #(12, 32) csrs(clk, aluout, csr_addr, csr_wen, csr_out);
 
 BranchUnit be(src1, src2, func3, opcode, ben);
 
