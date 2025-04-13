@@ -10,7 +10,7 @@
 word_t expr(char *e, bool *success);
 
 
-static int is_batch_mode = true;
+static int is_batch_mode = false;
 
 void init_regex();
 void init_wp_pool();
