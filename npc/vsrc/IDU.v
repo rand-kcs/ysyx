@@ -16,6 +16,8 @@ module IDU (
 
   output [11:0] csr_addr,
   output csr_wen,
+  output is_ecall,
+  output is_mret
 );
 
 assign func3 = inst[14:12];
@@ -46,6 +48,8 @@ assign mem_wen = opcode === 7'b0100011 ;
 
 assign csr_addr = inst[31:20];
 assign csr_wen = opcode === 7'b1110011 ;
+assign is_ecall = inst === 32'h00000073;
+assign is_mret = inst === 32'h30200073 ;
 
 
 // Make Immgen
