@@ -23,6 +23,8 @@
 typedef uint32_t word_t;
 #endif
 
+#define FMT_PADDR  "0x%08"
+
 // macro stringizing
 #define str_temp(x) #x
 #define str(x) str_temp(x)
