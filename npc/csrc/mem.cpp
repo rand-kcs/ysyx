@@ -4,7 +4,9 @@
 #include <cstring>
 #include "mem.h"
 #include "utils.h"
+#include "macro.h"
 
+void difftest_skip_ref();
 
 uint32_t img [] = {
 	0x00100093, // addi r1, r0, 1
@@ -65,6 +67,7 @@ extern "C" int pmem_read(int addr) {
   log_write("[npc]: Reading addr 0x%08x\n", addr);
 
   if(addr == RTC_ADDR){
+    difftest_skip_ref();
     uint64_t us = get_time();
     rtc_port_base[0] = (uint32_t)us;
     rtc_port_base[1] = us >> 32;
@@ -72,6 +75,7 @@ extern "C" int pmem_read(int addr) {
   }
 
   if(addr == RTC_ADDR + 4){
+    difftest_skip_ref();
     uint64_t us = get_time();
     rtc_port_base[0] = (uint32_t)us;
     rtc_port_base[1] = us >> 32;
@@ -95,6 +99,7 @@ extern "C" void pmem_write(int waddr, int wdata, char wmask) {
   // 如`wmask = 0x3`代表只写入最低2个字节, 内存中的其它字节保持不变
   //
   if(waddr == SERIAL_PORT){
+    difftest_skip_ref();
     Assert(wmask == 0x1, "Writing more than char at once");
     putchar(wdata);
     return;
