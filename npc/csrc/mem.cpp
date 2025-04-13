@@ -8,6 +8,9 @@
 
 uint32_t img [] = {
 	0x00100093, // addi r1, r0, 1
+	0x34209073, // csrw mcaus, r1
+	0x34202173, // csrr r2,mcause
+
   0x0000b113, // sltiu x2, x1, 0
   0x00108133, // add x2, x1, x1
 	0x00108113, // addi r2, r1, 1
