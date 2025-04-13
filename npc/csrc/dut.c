@@ -12,6 +12,11 @@ void (*ref_difftest_exec)(uint64_t n) = NULL;
 void (*ref_difftest_raise_intr)(uint64_t NO) = NULL;
 
 
+static bool is_skip_ref = false;
+
+void difftest_skip_ref() {
+  is_skip_ref = true;
+}
 
 void init_difftest(char *ref_so_file, long img_size, int port) {
   assert(ref_so_file != NULL);
@@ -54,7 +59,7 @@ bool isa_difftest_checkregs(CPU_state *ref) {
     }
   }
   if(ref->pc != tb->pc){
-    Log("PC dont Match\n") ;
+    Log("PC dont Match :\ntb: 0x%08x\nref: 0x%08x \n", tb->pc, ref->pc) ;
     return false;
   }
 
@@ -72,6 +77,13 @@ static void checkregs(CPU_state *ref, vaddr_t pc) {
 
 void difftest_step(vaddr_t pc, vaddr_t npc) {
   CPU_state ref_r;
+
+  if(is_skip_ref)  {
+    Log("nemu skip at pc: " FMT_PADDR, pc);
+    ref_difftest_regcpy(&cpu, DIFFTEST_TO_REF);
+    is_skip_ref = false;
+    return;
+  }
 
   ref_difftest_exec(1);
   ref_difftest_regcpy(&ref_r, DIFFTEST_TO_DUT);
