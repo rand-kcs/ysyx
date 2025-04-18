@@ -1,3 +1,4 @@
+#include <set>
 #include <stdio.h>
 #include <dlfcn.h>
 #include "cpu.h"
@@ -63,7 +64,7 @@ bool isa_difftest_checkregs(CPU_state *ref) {
     return false;
   }
 
-  Log("Diff Check Pass\n");
+  //Log("Diff Check Pass\n");
   return true;
 }
 
@@ -75,11 +76,19 @@ static void checkregs(CPU_state *ref, vaddr_t pc) {
   }
 }
 
+void set_cpu(){
+  for(int i = 0; i < RISCV_GPR_NUM; i++){
+    cpu.gpr[i] = tb->rf_dbg[i];
+  }
+  cpu.pc = tb->pc;
+}
+
 void difftest_step(vaddr_t pc, vaddr_t npc) {
   CPU_state ref_r;
 
   if(is_skip_ref)  {
-    Log("nemu skip at pc: " FMT_PADDR, pc);
+    log_write("nemu skip at pc: " FMT_PADDR, pc);
+    set_cpu();
     ref_difftest_regcpy(&cpu, DIFFTEST_TO_REF);
     is_skip_ref = false;
     return;
