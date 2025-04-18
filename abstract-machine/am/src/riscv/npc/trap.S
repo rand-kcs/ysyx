@@ -13,7 +13,7 @@
 #endif
 
 #define REGS_LO16(f) \
-      f( 1)       f( 3) f( 4) f( 5) f( 6) f( 7) f( 8) f( 9) \
+f(0)  f( 1) f(2)  f( 3) f( 4) f( 5) f( 6) f( 7) f( 8) f( 9) \
 f(10) f(11) f(12) f(13) f(14) f(15)
 #ifndef __riscv_e
 #define REGS_HI16(f) \
@@ -31,7 +31,7 @@ f(30) f(31)
 #define PUSH(n) STORE concat(x, n), (n * XLEN)(sp);
 #define POP(n)  LOAD  concat(x, n), (n * XLEN)(sp);
 
-#define CONTEXT_SIZE  ((NR_REGS + 3 + 1) * XLEN)
+#define CONTEXT_SIZE  ((NR_REGS + 3) * XLEN)
 #define OFFSET_SP     ( 2 * XLEN)
 #define OFFSET_CAUSE  ((NR_REGS + 0) * XLEN)
 #define OFFSET_STATUS ((NR_REGS + 1) * XLEN)
@@ -52,8 +52,14 @@ __am_asm_trap:
   STORE t1, OFFSET_STATUS(sp)
   STORE t2, OFFSET_EPC(sp)
 
+  # set mstatus.MPRV to pass difftest
+  li a0, (1 << 17)
+  or t1, t1, a0
+  csrw mstatus, t1
+
   mv a0, sp
   jal __am_irq_handle
+  LOAD  sp, OFFSET_SP(a0);
 
   LOAD t1, OFFSET_STATUS(sp)
   LOAD t2, OFFSET_EPC(sp)
