@@ -101,7 +101,7 @@ extern "C" void pmem_write(int waddr, int wdata, char wmask) {
   if(waddr == SERIAL_PORT){
     difftest_skip_ref();
     Assert(wmask == 0x1, "Writing more than char at once");
-    putchar(wdata);
+    putc(wdata, stderr);
     return;
   }
   switch (wmask) {
