@@ -14,7 +14,11 @@ Context* __am_irq_handle(Context *c) {
     Event ev = {0};
     switch (c->mcause) {
       case 0xb:
+        #ifdef __riscv_e
+        if(c->gpr[15] == -1){
+        #else
         if(c->gpr[17] == -1){
+        #endif
           c->mepc += 4;
           ev.event = EVENT_YIELD;
           break;
