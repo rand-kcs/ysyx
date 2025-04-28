@@ -3,6 +3,7 @@ module RegisterFile #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
   input [DATA_WIDTH-1:0] wdata,
   input [ADDR_WIDTH-1:0] waddr,
   input wen, 
+  input valid_wbu,
 
   input [ADDR_WIDTH-1:0] rs1,
   input [ADDR_WIDTH-1:0] rs2,
@@ -15,7 +16,7 @@ module RegisterFile #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
   reg [DATA_WIDTH-1:0] rf [2**ADDR_WIDTH-1:0];
   always @(posedge clk) begin
 	// solution 2 : change inside 
-    if (wen && waddr !== 0) rf[waddr] <= wdata;
+    if (valid_wbu && wen && waddr !== 0) rf[waddr] <= wdata;
   end
 
 	// solution 1 ---> what's the circuit generated???

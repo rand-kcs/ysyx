@@ -11,105 +11,13 @@ module top(
 		input rst,
 		output reg [31:0] inst,
 		output [31:0] pc,
+    output done,
 		output [31:0] rf_dbg [31:0]
 );
-
 
 import "DPI-C" function int pmem_read(input int raddr);
 import "DPI-C" function void pmem_write(
   input int waddr, input int wdata, input byte wmask);
-
-always @(negedge clk) begin
-  inst <= pmem_read(pc);
-end
-
-
-wire [4:0] rs1;
-wire [4:0] rs2;
-wire [4:0] rd;
-wire [31:0] imm;
-wire wen;
-wire valid;
-wire mem_wen;
-
-wire [31:0] src1;
-wire [31:0] src2;
-wire [31:0] wdata;
-wire [2:0] func3;
-wire [6:0] opcode;
-wire [9:0] funcEU;
-wire [1:0] amux1;
-wire [1:0] amux2;
-
-wire [31:0] aluout;
-
-wire [31:0] snpc;
-wire [31:0] dnpc;
-wire alu2wdata;
-
-wire [31:0] rdata;
-wire [31:0] rdata_w;
-
-wire [7:0] wmask;
-wire ben; // Branch Enable
-wire jen; // Jump Enable
-
-wire [11:0] csr_addr;
-wire csr_wen;
-wire [31:0] csr_out;
-wire [31:0] csr_wdata;
-
-wire is_ecall;
-wire is_mret;
-
-
-assign snpc = pc + 4;
-
-wire [1:0] dnpc_select;
-assign dnpc_select = {is_ecall|is_mret, ben|jen};
-
-MuxKeyWithDefault #(4, 2, 32) dnpcMKWD(dnpc, dnpc_select, 32'b0, {
-	2'b00, snpc,
-	2'b01, aluout,
-	2'b10, csr_out,
-	2'b11, csr_out
-});
-
-PC_reg pc_reg(clk, rst, dnpc, pc);
-
-// Decode Unit  -- RF -- EX   connected
-
-IDU idu (inst, rs1, rs2, rd, imm, wen, func3, funcEU, amux1, amux2, opcode, valid, mem_wen, wmask, csr_addr, csr_wen, is_ecall, is_mret);
-assign jen = (opcode === 7'b1101111 | opcode === 7'b1100111); // jal and jalr
-
-MuxKeyWithDefault #(4, 7, 32) wdataMKWD(wdata, opcode, aluout, {
-	7'b1101111, snpc,     //jal 
-	7'b1100111, snpc,     //jalr 
-  7'b0000011, rdata_w,  // lw, lh, lb, ...
-  7'b1110011, csr_out  // csr..
-
-  // unspecify opcode lead to default -- aluout
-  // ( the inst with wen)
-});
-
-RegisterFile #(5, 32) RF(clk, wdata, rd, wen, rs1, rs2, src1, src2, rf_dbg);
-
-ExecuteUnit eu(src1, src2, imm, pc, funcEU, amux1, amux2, aluout);
-
-CSRs #(12, 32) csrs(clk, rst, csr_wdata, csr_addr, csr_wen, is_ecall, is_mret, pc, csr_out);
-CSR_ALU csr_alu(func3,  csr_out, src1, csr_wdata);
-
-BranchUnit be(src1, src2, func3, opcode, ben);
-
-Mem memory(valid, aluout, mem_wen, aluout, wmask, src2, rdata);
-
-RDATA_Processor rdata_processor(rdata, func3, rdata_w);
-
-initial begin
-	$display("[%0t]Not Tracing to logs/vlt_dump.fst", $time);
-	//$dumpfile("logs/vlt_dump.fst");
-	//$dumpvars();
-end 
 
 export "DPI-C" function ebreakYes;
 
@@ -117,5 +25,258 @@ function ebreakYes;
 	ebreakYes =  !|((inst & 32'hfff0707f) ^ 32'h00100073);
 endfunction
 
+wire dnpc;
+wire [4:0] rd_wbu;
+wire [31:0] gpr_wdata_wbu;
+wire csr_wen_wbu,
+wire [11:0] csr_addr_wbu,
+wire [31:0] csr_wdata_wbu,
+ 
+wire [31:0] pc_ifu_idu, pc_idu_exu, pc_exu_lsu, pc_lsu_wbu;
+wire [31:0] inst_ifu_idu;
+
+wire ready_idu_ifu, ready_exu_idu, ready_lsu_exu, ready_wbu_lsu;
+wire valid_ifu_idu, valid_idu_exu, valid_exu_lsu, valid_lsu_wbu;
+
+PC_reg pc_reg(.clk(clk), .rst(rst), .valid_wbu(), .dnpc(dnpc), .pc(pc), .done(done));
+
+wire [4:0] rs1_idu, rs2_idu, rd_idu_exu;
+RegisterFile #(5, 32) gprs(.clk(clk), .wdata(gpr_wdata_wbu), 
+  .waddr(rd_wbu) .wen(gpr_wen_wbu), .rs1(rs1_idu), .rs2(rs2_idu), 
+  .src1(src1_gpr), .src2(src2_gpr), .dbg_rf(rf_dbg));
+
+CSRs #(12, 32) csrs(
+  .clk(clk), .rst(rst), 
+  .addr(csr_addr_idu),
+  .data(csr_out)
+);
+
+IFU ifu(
+  .clk(clk), 
+  .rst(rst), 
+
+  .ready_in_idu(ready_idu_ifu), 
+  .valid_out_idu(valid_ifu_idu), 
+
+  // input
+  .pc(pc), 
+  .done(done), 
+
+  // output
+  .pc_buf(pc_ifu_idu),
+  .inst(inst_ifu_idu)
+);
+
+
+  wire [31:0] pc_idu,
+	wire [4:0] rs1_idu,
+	wire [4:0] rs2_idu,
+	wire [4:0] rd_idu,
+	wire [31:0] imm_idu,
+	wire gpr_wen_idu ,
+	wire [2:0] func3_idu,
+	wire [9:0] funcEU_idu,
+	wire [1:0] amux1_idu,
+	wire [1:0] amux2_idu,
+	wire [6:0] opcode_idu,
+  wire mem_ren_idu,
+  wire mem_wen_idu,
+  wire [7:0] wmask_idu,
+
+  wire [11:0] csr_waddr_idu,
+  wire csr_wen_idu,
+  wire is_ecall_idu,
+  wire is_mret_idu
+
+IDU idu(
+  .clk(clk), 
+  .rst(rst), 
+
+  .ready_in_exu(ready_exu_idu), 
+  .valid_out_exu(valid_idu_exu), 
+
+  .valid_in_ifu(valid_ifu_idu), 
+  .ready_out_ifu(ready_idu_ifu), 
+
+  .pc(pc_ifu_idu),
+  .inst(inst_ifu_idu),
+
+  // output
+  .pc_buf(pc_idu),
+	.rs1_buf(rs1_idu),
+	.rs2_buf(rs2_idu),
+	.rd_buf(rd_idu),
+	.imm_buf(imm_idu),
+	.gpr_wen_buf(gpr_wen_idu) ,
+	.func3_buf(func3_idu),
+	.funcEU_buf(funcEU_idu),
+	.amux1_buf(amux1_idu),
+	.amux2_buf(amux2_idu),
+	.opcode_buf(opcode_idu),
+  .mem_ren_buf(mem_ren_idu),
+  .mem_wen_buf(mem_wen_idu),
+  .wmask_buf(wmask_idu),
+
+
+  .wmask(wmask_idu),
+  .mem_wen(mem_wen_idu),
+  .mem_ren(mem_ren_idu),
+  .ben(ben_idu),
+  .gpr_wen(gpr_wen_idu),
+  .rd(rd_idu),
+  .csr_wen(csr_wen_idu),
+  .csr_waddr(csr_waddr_idu),
+
+
+  .csr_addr_buf(csr_addr_idu),
+  .csr_wen_buf(csr_wen_idu),
+  .is_ecall_buf(is_ecall_idu),
+  .is_mret_buf(is_mret_idu),
+
+  .rs1_buf(rs1_idu), 
+  .rs2_buf(rs2_idu), 
+);
+
+
+wire ben_exu,
+wire gpr_wen_exu,
+wire rd_exu,
+wire csr_wen_exu,
+wire [11:0] csr_waddr_exu,
+
+wire [2:0] func3_exu,
+wire mem_ren_exu,
+wire [31:0] wdata_exu,
+wire [7:0] wmask_exu,
+wire mem_wen_exu,
+
+wire ben_exu,
+wire [31:0] aluOut_exu,
+wire [31:0] csr_wdata_exu,
+wire [31:0] pc_exu,
+wire [6:0] opcode_exu,
+
+EXU exu(
+  .clk(clk), 
+  .rst(rst), 
+
+  .ready_in_lsu(ready_lsu_exu), 
+  .valid_out_lsu(valid_exu_lsu),  
+
+  .valid_in_idu(valid_idu_exu), 
+  .ready_out_idu(ready_exu_idu), 
+
+  .func3(func3_idu),
+  .opcode(opcode_idu),
+  .imm(imm_idu),
+  .pc(pc_idu),
+  .funcEU(funcEU_idu),
+  .amux1(amux1_idu),
+  .amux2(amux2_idu),
+
+  .scr1(src1_gpr), 
+  .scr2(src2_gpr)
+  .csr_out(csr_out),
+
+
+  .ben_buf(ben_exu),
+  .gpr_wen_buf(gpr_wen_exu),
+  .rd_buf(rd_exu),
+  .csr_wen_buf(csr_wen_exu),
+  .csr_waddr_buf(csr_waddr_exu),
+  
+  .func3(func3_exu),
+  .mem_ren_buf(mem_ren_exu),
+  .wdata_buf(wdata_exu),
+  .wmask_buf(wmask_exu),
+  .mem_wen_buf(mem_wen_exu),
+  .pc_buf(pc_exu),
+  .csr_out_buf(csr_out_exu),
+  .opcode_buf(opcode_exu),
+ 
+  .ben_buf(ben_exu),
+  .aluOut_buf(aluOut_exu),
+  .csr_wdata_buf(csr_wdata_exu)
+
+);
+
+wire ben_lsu,
+wire [31:0] pc_lsu,
+wire [31:0] csr_out_lsu,
+wire csr_wen_lsu,
+wire gpr_wen_lsu,
+wire [11:0] csr_waddr_lsu,
+wire [31:0] csr_wdata_lsu,
+wire [31:0] rdata_w_lsu
+wire [6:0] opcode_lsu
+wire [4:0] rd_lsu
+wire [31:0] alu_out_lsu
+
+
+LSU lsu(
+  .clk(clk), 
+  .rst(rst), 
+
+  .ready_in_wbu(ready_wbu_lsu), 
+  .valid_out_wbu(valid_lsu_wbu), 
+
+  .valid_in_exu(valid_exu_lsu), 
+
+  .ben(ben_exu),
+  .pc(pc_exu),
+  .csr_out(csr_out_exu),
+  .opcode(opcode_exu),
+  
+  .gpr_wen(gpr_wen_exu),
+  .rd(rd_exu),
+
+  .csr_wen_buf(csr_wen_exu),
+  .csr_waddr_buf(csr_waddr_exu),
+  .csr_wdata_buf(csr_wdata_exu),
+
+  // LSU自己用的
+  .mem_ren(mem_ren_exu),
+  .mem_wen(mem_wen_exu),
+  .alu_out(aluOut_exu), // 同时也是 aluout
+  .wmask(wmask_exu),
+  .wdata(wdata_exu),
+  .func3(func3_exu),
+
+  // output
+  .ben_buf(ben_lsu),
+  .pc_buf(pc_lsu),
+  .gpr_wen_buf(gpr_wen_lsu),
+  .csr_out_buf(csr_out_lsu),
+  .csr_wen_buf(csr_wen_lsu),
+  .csr_waddr_buf(csr_waddr_lsu),
+  .csr_wdata_buf(csr_wdata_lsu),
+  .rdata_w_buf(rdata_w_lsu)
+);
+
+WBU wbs(
+  .valid_in_lsu(valid_lsu_wbu), 
+
+  .opcode(opcode_lsu),
+  .pc(pc_lsu),
+  .alu_out(alu_out_lsu),
+  .csr_out(csr_out_lsu),
+  .rdata_w(rdata_w_lsu),
+  .gpr_wen(gpr_wen_lsu),
+  .rd(rd_lsu),
+  .csr_wen(csr_wen_lsu,
+  .csr_waddr(csr_waddr_lsu),
+  .csr_wdata(csr_wdata_lsu),
+
+  .gpr_wen_buf(gpr_wen_wbu)
+  .rd_buf(rd_wbu), 
+  .gpr_wdata_buf(gpr_wdata_wbu), 
+
+  .dnpc(dnpc),
+
+  .csr_wen_buf(csr_wen_wbu),
+  .csr_addr_buf(csr_addr_wbu),
+  .csr_wdata_buf(csr_wdata_wbu),
+
+);
 
 endmodule

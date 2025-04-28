@@ -1,24 +1,111 @@
 module IDU (
-	input [31:0] inst,
-	output [4:0] rs1,
-	output [4:0] rs2,
-	output [4:0] rd,
-	output [31:0] imm,
-	output wen /*verilator public*/,
-	output [2:0] func3,
-	output [9:0] funcEU,
-	output [1:0] amux1,
-	output [1:0] amux2,
-	output [6:0] opcode,
-  output valid,
-  output mem_wen,
-  output [7:0] wmask,
+  input clk,
+  input rst,
 
-  output [11:0] csr_addr,
-  output csr_wen,
-  output is_ecall,
-  output is_mret
+  input valid_in_ifu,
+  output ready_out_ifu,
+
+  output valid_out_exu,
+  input ready_in_exu,
+
+  input [31:0] pc,
+	input [31:0] inst,
+  output reg [31:0] pc_buf,
+	output reg [4:0] rs1_buf,
+	output reg [4:0] rs2_buf,
+	output reg [4:0] rd_buf,
+	output reg [31:0] imm_buf,
+	output reg gpr_wen_buf,
+	output reg [2:0] func3_buf,
+	output reg [9:0] funcEU_buf,
+	output reg [1:0] amux1_buf,
+	output reg [1:0] amux2_buf,
+	output reg [6:0] opcode_buf,
+  output reg mem_ren_buf,
+  output reg mem_wen_buf,
+  output reg [7:0] wmask_buf,
+
+  output reg [11:0] csr_addr_buf,
+  output reg csr_wen_buf,
+  output reg is_ecall_buf,
+  output reg is_mret_buf
 );
+
+wire [4:0] rs1;
+wire [4:0] rs2;
+wire [4:0] rd;
+wire [31:0] imm;
+wire gpr_wen;
+wire [2:0] func3;
+wire [9:0] funcEU;
+wire [1:0] amux1;
+wire [1:0] amux2;
+wire [6:0] opcode;
+wire mem_ren;
+wire mem_wen;
+wire [7:0] wmask;
+
+wire [11:0] csr_addr;
+wire csr_wen;
+wire is_ecall;
+wire is_mret;
+
+
+
+typedef enum logic [1:0] {
+  IDLE      = 2'b00,
+  WAIT_READY = 2'b01,
+} state_t;
+
+wire [1:0] next_state;
+wire [1:0] current_state;
+
+// state trans reg;
+Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
+
+// state change logic : next_state
+always@(*) begin
+  next_state = current_state;
+  case (current_state)
+    IDLE : begin
+      if(valid_in_ifu) begin
+        next_state = WAIT_READY;
+      end
+    end
+    WAIT_READY : begin
+      if(ready_in_exu) begin
+        next_state = IDLE; 
+      end
+    end
+end
+
+// output rely on specific state;
+assign ready_out_ifu = current_state === IDLE;
+assign valid_out_exu = current_state === WAIT_READY;
+
+always @(posedge clk) begin
+  if (current_state === IDLE && next_state === WAIT_READY) begin  // 状态恰好转移
+    pc_buf <= pc;
+    rs1_buf <= rs1;
+    rs2_buf <= rs2;
+    rd_buf <= rd;
+    imm_buf <= imm;
+    gpr_wen_buf <= gpr_wen;
+    func3_buf <= func3;         
+    funcEU_buf <= funcEU;       
+    amux1_buf <= amux1;         
+    amux2_buf <= amux2;         
+    opcode_buf <= opcode;       
+    mem_ren_buf <= mem_ren;         
+    mem_wen_buf <= mem_wen;     
+    wmask_buf <= wmask;         
+    csr_addr_buf <= csr_addr;    
+    csr_wen_buf <= csr_wen;     
+    is_ecall_buf <= is_ecall;    
+    is_mret_buf <= is_mret;     
+  end
+end
+
 
 assign func3 = inst[14:12];
 
@@ -42,8 +129,8 @@ wire [2:0] itype;
 TypeIndicator typeIc (opcode, itype);
 
 // modulize a equaler ? 
-assign wen =  itype === `I_TYPE | itype === `U_TYPE | itype === `J_TYPE | itype ===`R_TYPE;
-assign valid = opcode === 7'b0000011 | opcode === 7'b0100011; // load and store
+assign gpr_wen =  itype === `I_TYPE | itype === `U_TYPE | itype === `J_TYPE | itype ===`R_TYPE;
+assign mem_ren = opcode === 7'b0000011 ; // load 
 assign mem_wen = opcode === 7'b0100011 ;
 
 assign csr_addr = inst[31:20];
