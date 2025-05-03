@@ -14,13 +14,16 @@ module IFU (
   output reg [31:0] inst      // To IDU     
 );
 
-typedef enum logic [1:0] {
-  IDLE      = 2'b00,
-  WAIT_READY = 2'b01,
-} state_t;
+import "DPI-C" function int pmem_read(input int raddr);
+import "DPI-C" function void pmem_write(
+  input int waddr, input int wdata, input byte wmask);
 
-wire [1:0] next_state;
-wire [1:0] current_state;
+
+parameter IDLE       = 2'b00;
+parameter WAIT_READY = 2'b01;
+
+reg [1:0] next_state;
+reg [1:0] current_state;
 
 // state trans reg;
 Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
@@ -40,6 +43,9 @@ always@(*) begin
         next_state = IDLE; 
       end
     end
+    default: 
+        next_state = IDLE; 
+  endcase
 end
 
 // output reley on state

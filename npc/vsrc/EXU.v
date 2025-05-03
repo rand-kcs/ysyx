@@ -25,39 +25,44 @@ module EXU(
   input mem_wen,
   input mem_ren,
   
-  input ben,
   input gpr_wen,
-  input rd,
+  input [4:0] rd,
   input csr_wen,
   input [11:0] csr_waddr,
 
-  output ben_buf,
-  output gpr_wen_buf,
-  output rd_buf,
-  output csr_wen_buf,
-  output [11:0] csr_waddr_buf,
 
-  output reg func3,
+  input is_ecall,
+  input is_mret,
+
+  output reg gpr_wen_buf,
+  output reg [4:0] rd_buf,
+  output reg is_ecall_buf,
+  output reg is_mret_buf,
+  output reg csr_wen_buf,
+  output reg [11:0] csr_waddr_buf,
+
+  output reg [2:0] func3_buf,
   output reg mem_ren_buf,
   output reg [31:0] wdata_buf,
   output reg [7:0] wmask_buf,
   output reg mem_wen_buf,
   output reg [31:0] pc_buf,
   output reg [31:0] csr_out_buf,
-  output [6:0] opcode_buf,
+  output reg [6:0] opcode_buf,
 
   output reg ben_buf,
 	output reg [31:0] aluOut_buf,
   output reg [31:0] csr_wdata_buf
 );
 
-typedef enum logic [1:0] {
-  IDLE      = 2'b00,
-  WAIT_READY = 2'b01,
-} state_t;
+wire [31:0] aluOut;
+wire [31:0] csr_wdata;
 
-wire [1:0] next_state;
-wire [1:0] current_state;
+parameter IDLE       = 2'b00;
+parameter WAIT_READY = 2'b01;
+
+reg [1:0] next_state;
+reg [1:0] current_state;
 
 // state trans reg;
 Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
@@ -76,6 +81,9 @@ always@(*) begin
         next_state = IDLE; 
       end
     end
+    default: 
+        next_state = IDLE; 
+  endcase
 end
 
 // output rely on specific state;
@@ -89,11 +97,13 @@ always@(posedge clk) begin
     csr_wdata_buf <= csr_wdata;
 
     // Pass 
-    func3_buf <= func;
-    mem_ren_buf <= mem_ren_buf;
+    func3_buf <= func3;
+    mem_ren_buf <= mem_ren;
     wdata_buf <= src2;
     wmask_buf <= wmask;
     mem_wen_buf <= mem_wen;
+    is_ecall_buf <= is_ecall;
+    is_mret_buf <= is_mret;
 
     ben_buf <= ben;
     gpr_wen_buf <= gpr_wen;
@@ -131,7 +141,10 @@ end
 
 
 	ALU alu(asrc1, asrc2, funcEU, aluOut);
+
+  wire ben;
   BranchUnit be(src1, src2, func3, opcode, ben);
+
   CSR_ALU csr_alu(func3,  csr_out, src1, csr_wdata);
 
 endmodule

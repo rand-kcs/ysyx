@@ -25,12 +25,17 @@ function ebreakYes;
 	ebreakYes =  !|((inst & 32'hfff0707f) ^ 32'h00100073);
 endfunction
 
-wire dnpc;
+wire [31:0] dnpc;
 wire [4:0] rd_wbu;
 wire [31:0] gpr_wdata_wbu;
-wire csr_wen_wbu,
-wire [11:0] csr_addr_wbu,
-wire [31:0] csr_wdata_wbu,
+wire csr_wen_wbu;
+wire valid_wbu;
+wire [11:0] csr_waddr_wbu;
+wire [31:0] csr_wdata_wbu;
+wire is_ecall_wbu;
+wire is_mret_wbu;
+wire [31:0] pc_wbu;
+wire gpr_wen_wbu;
  
 wire [31:0] pc_ifu_idu, pc_idu_exu, pc_exu_lsu, pc_lsu_wbu;
 wire [31:0] inst_ifu_idu;
@@ -38,17 +43,28 @@ wire [31:0] inst_ifu_idu;
 wire ready_idu_ifu, ready_exu_idu, ready_lsu_exu, ready_wbu_lsu;
 wire valid_ifu_idu, valid_idu_exu, valid_exu_lsu, valid_lsu_wbu;
 
-PC_reg pc_reg(.clk(clk), .rst(rst), .valid_wbu(), .dnpc(dnpc), .pc(pc), .done(done));
+PC_reg pc_reg(.clk(clk), .rst(rst), .valid_wbu(valid_wbu), .dnpc(dnpc), .pc(pc), .done(done));
 
 wire [4:0] rs1_idu, rs2_idu, rd_idu_exu;
-RegisterFile #(5, 32) gprs(.clk(clk), .wdata(gpr_wdata_wbu), 
-  .waddr(rd_wbu) .wen(gpr_wen_wbu), .rs1(rs1_idu), .rs2(rs2_idu), 
+wire [31:0] src1_gpr, src2_gpr;
+wire [31:0] csr_out_idu;
+RegisterFile #(5, 32) gprs(.clk(clk), .wdata(gpr_wdata_wbu),  .valid_wbu(valid_wbu),
+  .waddr(rd_wbu), .wen(gpr_wen_wbu), .rs1(rs1_idu), .rs2(rs2_idu), 
   .src1(src1_gpr), .src2(src2_gpr), .dbg_rf(rf_dbg));
 
 CSRs #(12, 32) csrs(
   .clk(clk), .rst(rst), 
-  .addr(csr_addr_idu),
-  .data(csr_out)
+  .valid_wbu(valid_wbu),
+
+  .waddr(csr_waddr_wbu),
+  .wdata(csr_wdata_wbu),
+  .wen(csr_wen_wbu),
+  .is_ecall(is_ecall_wbu),
+  .is_mret(is_mret_wbu),
+  .pc(pc_wbu),
+
+  .raddr(csr_waddr_idu),
+  .data(csr_out_idu)
 );
 
 IFU ifu(
@@ -68,25 +84,25 @@ IFU ifu(
 );
 
 
-  wire [31:0] pc_idu,
-	wire [4:0] rs1_idu,
-	wire [4:0] rs2_idu,
-	wire [4:0] rd_idu,
-	wire [31:0] imm_idu,
-	wire gpr_wen_idu ,
-	wire [2:0] func3_idu,
-	wire [9:0] funcEU_idu,
-	wire [1:0] amux1_idu,
-	wire [1:0] amux2_idu,
-	wire [6:0] opcode_idu,
-  wire mem_ren_idu,
-  wire mem_wen_idu,
-  wire [7:0] wmask_idu,
+  wire [31:0] pc_idu;
+	wire [4:0] rs1_idu;
+	wire [4:0] rs2_idu;
+	wire [4:0] rd_idu;
+	wire [31:0] imm_idu;
+	wire gpr_wen_idu ;
+	wire [2:0] func3_idu;
+	wire [9:0] funcEU_idu;
+	wire [1:0] amux1_idu;
+	wire [1:0] amux2_idu;
+	wire [6:0] opcode_idu;
+  wire mem_ren_idu;
+  wire mem_wen_idu;
+  wire [7:0] wmask_idu;
 
-  wire [11:0] csr_waddr_idu,
-  wire csr_wen_idu,
-  wire is_ecall_idu,
-  wire is_mret_idu
+  wire [11:0] csr_waddr_idu;
+  wire csr_wen_idu;
+  wire is_ecall_idu;
+  wire is_mret_idu;
 
 IDU idu(
   .clk(clk), 
@@ -117,44 +133,34 @@ IDU idu(
   .mem_wen_buf(mem_wen_idu),
   .wmask_buf(wmask_idu),
 
-
-  .wmask(wmask_idu),
-  .mem_wen(mem_wen_idu),
-  .mem_ren(mem_ren_idu),
-  .ben(ben_idu),
-  .gpr_wen(gpr_wen_idu),
-  .rd(rd_idu),
-  .csr_wen(csr_wen_idu),
-  .csr_waddr(csr_waddr_idu),
-
-
-  .csr_addr_buf(csr_addr_idu),
+  .csr_addr_buf(csr_waddr_idu),
   .csr_wen_buf(csr_wen_idu),
   .is_ecall_buf(is_ecall_idu),
-  .is_mret_buf(is_mret_idu),
-
-  .rs1_buf(rs1_idu), 
-  .rs2_buf(rs2_idu), 
+  .is_mret_buf(is_mret_idu)
 );
 
 
-wire ben_exu,
-wire gpr_wen_exu,
-wire rd_exu,
-wire csr_wen_exu,
-wire [11:0] csr_waddr_exu,
+wire ben_exu;
+wire gpr_wen_exu;
+wire [4:0] rd_exu;
+wire csr_wen_exu;
+wire [11:0] csr_waddr_exu;
+wire [31:0] csr_out_exu;
 
-wire [2:0] func3_exu,
-wire mem_ren_exu,
-wire [31:0] wdata_exu,
-wire [7:0] wmask_exu,
-wire mem_wen_exu,
+wire [2:0] func3_exu;
+wire mem_ren_exu;
+wire [31:0] wdata_exu;
+wire [7:0] wmask_exu;
+wire mem_wen_exu;
 
-wire ben_exu,
-wire [31:0] aluOut_exu,
-wire [31:0] csr_wdata_exu,
-wire [31:0] pc_exu,
-wire [6:0] opcode_exu,
+wire ben_exu;
+wire [31:0] aluOut_exu;
+wire [31:0] csr_wdata_exu;
+wire [31:0] pc_exu;
+wire [6:0] opcode_exu;
+
+wire is_ecall_exu;
+wire is_mret_exu;
 
 EXU exu(
   .clk(clk), 
@@ -173,10 +179,22 @@ EXU exu(
   .funcEU(funcEU_idu),
   .amux1(amux1_idu),
   .amux2(amux2_idu),
+  .is_ecall(is_ecall_idu),
+  .is_mret(is_mret_idu),
 
-  .scr1(src1_gpr), 
-  .scr2(src2_gpr)
-  .csr_out(csr_out),
+  .src1(src1_gpr), 
+  .src2(src2_gpr),
+  .csr_out(csr_out_idu),
+
+  .wmask(wmask_idu),
+  .mem_wen(mem_wen_idu),
+  .mem_ren(mem_ren_idu),
+  
+  .gpr_wen(gpr_wen_idu),
+  .rd(rd_idu),
+  .csr_wen(csr_wen_idu),
+  .csr_waddr(csr_waddr_idu),
+
 
 
   .ben_buf(ben_exu),
@@ -184,8 +202,11 @@ EXU exu(
   .rd_buf(rd_exu),
   .csr_wen_buf(csr_wen_exu),
   .csr_waddr_buf(csr_waddr_exu),
+
+  .is_ecall_buf(is_ecall_exu),
+  .is_mret_buf(is_mret_exu),
   
-  .func3(func3_exu),
+  .func3_buf(func3_exu),
   .mem_ren_buf(mem_ren_exu),
   .wdata_buf(wdata_exu),
   .wmask_buf(wmask_exu),
@@ -194,33 +215,35 @@ EXU exu(
   .csr_out_buf(csr_out_exu),
   .opcode_buf(opcode_exu),
  
-  .ben_buf(ben_exu),
   .aluOut_buf(aluOut_exu),
   .csr_wdata_buf(csr_wdata_exu)
 
 );
 
-wire ben_lsu,
-wire [31:0] pc_lsu,
-wire [31:0] csr_out_lsu,
-wire csr_wen_lsu,
-wire gpr_wen_lsu,
-wire [11:0] csr_waddr_lsu,
-wire [31:0] csr_wdata_lsu,
-wire [31:0] rdata_w_lsu
-wire [6:0] opcode_lsu
-wire [4:0] rd_lsu
-wire [31:0] alu_out_lsu
+wire ben_lsu;
+wire [31:0] pc_lsu;
+wire [31:0] csr_out_lsu;
+wire csr_wen_lsu;
+wire gpr_wen_lsu;
+wire [11:0] csr_waddr_lsu;
+wire [31:0] csr_wdata_lsu;
+wire [31:0] rdata_w_lsu;
+wire [6:0] opcode_lsu;
+wire [4:0] rd_lsu;
+wire [31:0] alu_out_lsu;
+wire is_ecall_lsu;
+wire is_mret_lsu;
 
 
 LSU lsu(
   .clk(clk), 
   .rst(rst), 
 
-  .ready_in_wbu(ready_wbu_lsu), 
+  .valid_in_exu(valid_exu_lsu), 
+  .ready_out_exu(ready_lsu_exu),
+
   .valid_out_wbu(valid_lsu_wbu), 
 
-  .valid_in_exu(valid_exu_lsu), 
 
   .ben(ben_exu),
   .pc(pc_exu),
@@ -230,9 +253,11 @@ LSU lsu(
   .gpr_wen(gpr_wen_exu),
   .rd(rd_exu),
 
-  .csr_wen_buf(csr_wen_exu),
-  .csr_waddr_buf(csr_waddr_exu),
-  .csr_wdata_buf(csr_wdata_exu),
+  .csr_wen(csr_wen_exu),
+  .csr_waddr(csr_waddr_exu),
+  .csr_wdata(csr_wdata_exu),
+  .is_ecall(is_ecall_exu),
+  .is_mret(is_mret_exu),
 
   // LSU自己用的
   .mem_ren(mem_ren_exu),
@@ -241,6 +266,7 @@ LSU lsu(
   .wmask(wmask_exu),
   .wdata(wdata_exu),
   .func3(func3_exu),
+  .rd_buf(rd_lsu),
 
   // output
   .ben_buf(ben_lsu),
@@ -248,14 +274,19 @@ LSU lsu(
   .gpr_wen_buf(gpr_wen_lsu),
   .csr_out_buf(csr_out_lsu),
   .csr_wen_buf(csr_wen_lsu),
+  .is_ecall_buf(is_ecall_lsu),
+  .is_mret_buf(is_mret_lsu),
   .csr_waddr_buf(csr_waddr_lsu),
   .csr_wdata_buf(csr_wdata_lsu),
-  .rdata_w_buf(rdata_w_lsu)
+  .rdata_w_buf(rdata_w_lsu),
+  .opcode_buf(opcode_lsu),
+  .alu_out_buf(alu_out_lsu)
 );
 
 WBU wbs(
   .valid_in_lsu(valid_lsu_wbu), 
 
+  .ben(ben_lsu),
   .opcode(opcode_lsu),
   .pc(pc_lsu),
   .alu_out(alu_out_lsu),
@@ -263,20 +294,26 @@ WBU wbs(
   .rdata_w(rdata_w_lsu),
   .gpr_wen(gpr_wen_lsu),
   .rd(rd_lsu),
-  .csr_wen(csr_wen_lsu,
+  .csr_wen(csr_wen_lsu),
   .csr_waddr(csr_waddr_lsu),
   .csr_wdata(csr_wdata_lsu),
+  .is_ecall(is_ecall_lsu),
+  .is_mret(is_mret_lsu),
 
-  .gpr_wen_buf(gpr_wen_wbu)
+  .gpr_wen_buf(gpr_wen_wbu),
   .rd_buf(rd_wbu), 
-  .gpr_wdata_buf(gpr_wdata_wbu), 
+  .gpr_wdata(gpr_wdata_wbu), 
+  .is_ecall_buf(is_ecall_wbu),
+  .is_mret_buf(is_mret_wbu),
 
   .dnpc(dnpc),
+  .pc_buf(pc_wbu),
 
   .csr_wen_buf(csr_wen_wbu),
-  .csr_addr_buf(csr_addr_wbu),
+  .csr_waddr_buf(csr_waddr_wbu),
   .csr_wdata_buf(csr_wdata_wbu),
 
+  .valid_out_wbu(valid_wbu)
 );
 
 endmodule

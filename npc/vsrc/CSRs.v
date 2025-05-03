@@ -2,14 +2,15 @@ module CSRs #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
   input clk,
   input rst,
   input valid_wbu,
+  input [ADDR_WIDTH-1:0] waddr,
   input [DATA_WIDTH-1:0] wdata,
-  input [ADDR_WIDTH-1:0] addr,
   //wen only stands for csrxx inst;
   input wen,
   input is_ecall,
   input is_mret,
   input [DATA_WIDTH-1:0] pc,
 
+  input [ADDR_WIDTH-1:0] raddr,
   output [DATA_WIDTH-1:0] data
 );
 // word_t mcause, mstatus, mepc;
@@ -41,7 +42,7 @@ always@(posedge clk) begin
       mcause  <= 32'hb;
     end
     if(wen) begin
-      case(addr)
+      case(waddr)
         12'h300: mstatus <= wdata; 
         12'h305: mtvec <= wdata; 
         12'h341: mepc <= wdata; 
@@ -53,7 +54,7 @@ always@(posedge clk) begin
 end
 
 
-MuxKeyWithDefault #(4, 12, 32) csr_data_Mux(csr_data, addr, 32'b0, {
+MuxKeyWithDefault #(4, 12, 32) csr_data_Mux(csr_data, raddr, 32'b0, {
   {12'h300} , mstatus,
   {12'h305} , mtvec ,
   {12'h341} , mepc ,

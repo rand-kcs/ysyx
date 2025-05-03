@@ -9,7 +9,7 @@ module LSU(
 
   // 传递给 WBU
   input ben,
-  input pc,
+  input [31:0] pc,
   input [31:0] csr_out,
   input [6:0] opcode,
   
@@ -17,7 +17,10 @@ module LSU(
   input [4:0] rd,
 
   input csr_wen,
+  input [31:0] csr_wdata,
   input [11:0] csr_waddr,
+  input is_ecall,
+  input is_mret,
 
   // LSU自己用的
   input mem_ren,
@@ -37,6 +40,8 @@ module LSU(
   output reg gpr_wen_buf,
   output reg [11:0] csr_waddr_buf,
   output reg [31:0] csr_wdata_buf,
+  output is_ecall_buf,
+  output is_mret_buf,
 
   output reg [31:0] rdata_w_buf
 );
@@ -51,13 +56,11 @@ import "DPI-C" function int pmem_read(input int raddr);
 import "DPI-C" function void pmem_write(
   input int waddr, input int wdata, input byte wmask);
 
-typedef enum logic [1:0] {
-  IDLE      = 2'b00,
-  WAIT_READY = 2'b01,
-} state_t;
+parameter IDLE       = 2'b00;
+parameter WAIT_READY = 2'b01;
 
-wire [1:0] next_state;
-wire [1:0] current_state;
+reg [1:0] next_state;
+reg [1:0] current_state;
 
 // state trans reg;
 Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
@@ -74,6 +77,9 @@ always@(*) begin
     WAIT_READY : begin
         next_state = IDLE; 
     end
+    default: 
+        next_state = IDLE; 
+  endcase
 end
 
 // output rely on specific state;
@@ -89,7 +95,6 @@ always@(posedge clk) begin
     opcode_buf <= opcode;
     pc_buf <= pc;
     rd_buf <= rd;
-    aluout_buf <= alu;
     csr_out_buf <= csr_out;
     alu_out_buf <= alu_out;
     gpr_wen_buf <=  gpr_wen;
@@ -97,6 +102,8 @@ always@(posedge clk) begin
     csr_wen_buf <= csr_wen;
     csr_waddr_buf <= csr_waddr;
     csr_wdata_buf <= csr_wdata;
+    is_ecall_buf <= is_ecall;
+    is_mret_buf <= is_mret;
   end
 end
 
@@ -105,7 +112,7 @@ reg [31:0] rdata;
 wire [31:0] rdata_w;
 
 always @(mem_ren, raddr, waddr, wdata, wmask, mem_wen) begin
-  if ( valid_in_exu && (mem_ren | mem_wen)) begin // 有读写请求时
+  if ( valid_in_exu & (mem_ren | mem_wen)) begin // 有读写请求时
 	//$display("[%0t] callling pmem_read from Mem module", $time);
     rdata <= pmem_read(raddr);
     if (mem_wen) begin // 有写请求时

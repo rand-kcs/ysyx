@@ -4,7 +4,7 @@ module PC_reg (
   input valid_wbu,
 	input [31:0] dnpc,
 	output [31:0] pc,
-  output reg done,
+  output reg done
 );
 
 Reg #(32, 32'h80000000) reg_init(clk, rst, dnpc, pc, valid_wbu);

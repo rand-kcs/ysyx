@@ -52,13 +52,13 @@ wire is_mret;
 
 
 
-typedef enum logic [1:0] {
-  IDLE      = 2'b00,
-  WAIT_READY = 2'b01,
-} state_t;
 
-wire [1:0] next_state;
-wire [1:0] current_state;
+parameter IDLE       = 2'b00;
+parameter WAIT_READY = 2'b01;
+
+
+reg [1:0] next_state;
+reg [1:0] current_state;
 
 // state trans reg;
 Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
@@ -77,13 +77,16 @@ always@(*) begin
         next_state = IDLE; 
       end
     end
+    default: 
+        next_state = IDLE; 
+  endcase
 end
 
 // output rely on specific state;
 assign ready_out_ifu = current_state === IDLE;
 assign valid_out_exu = current_state === WAIT_READY;
 
-always @(posedge clk) begin
+always@(posedge clk) begin
   if (current_state === IDLE && next_state === WAIT_READY) begin  // 状态恰好转移
     pc_buf <= pc;
     rs1_buf <= rs1;
