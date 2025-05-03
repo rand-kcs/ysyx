@@ -6,9 +6,6 @@
 #include "svdpi.h"
 #include "difftest.h"
 #include "Vtop__Dpi.h"
-#include "Vtop_top.h"
-#include "Vtop_ExecuteUnit.h"
-#include "Vtop_IDU.h"
 #define MAX_INST_TO_PRINT 10
 
 CPU_state cpu = {};
@@ -55,6 +52,7 @@ static void exec_once() {
   trace();
 
 	single_cycle();
+  printf("One inst execute state: %x\n", tb->done);
   //printf("Test ALU_imm_input: 0x%08x\n", tb->top->eu->imm);
   //print_reg_status();
   //printf("Test IDU_Wen: 0x%08x\n", tb->top->idu->wen);
@@ -67,11 +65,15 @@ static void exec_once() {
 
   #ifdef DIFFTEST
   /* difftest */
-  difftest_step(tb->pc, tb->pc);
+  if(tb->done)
+    difftest_step(tb->pc, tb->pc);
   #endif
 
 
 	if(ebreakYes()){
+    tb->clk = 0;          // 手动置低
+    tb->eval();            // 更新信号状态
+    contextp->timeInc(1);  // 时间增加 1 单位
 		npc_state.state = NPC_END;
 		npc_state.halt_pc = tb->pc;
   }

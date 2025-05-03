@@ -107,7 +107,7 @@ always@(posedge clk) begin
 
     ben_buf <= ben;
     gpr_wen_buf <= gpr_wen;
-    rd_buf <= rd_buf;
+    rd_buf <= rd;
     pc_buf <= pc;
     opcode_buf <= opcode;
     csr_out_buf <= csr_out;

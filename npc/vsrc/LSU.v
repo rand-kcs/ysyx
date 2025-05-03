@@ -112,9 +112,10 @@ reg [31:0] rdata;
 wire [31:0] rdata_w;
 
 always @(mem_ren, raddr, waddr, wdata, wmask, mem_wen) begin
-  if ( valid_in_exu & (mem_ren | mem_wen)) begin // 有读写请求时
-	//$display("[%0t] callling pmem_read from Mem module", $time);
-    rdata <= pmem_read(raddr);
+  if (valid_in_exu) begin
+    if(mem_ren) begin // 有读写请求时
+      rdata <= pmem_read(raddr);
+    end
     if (mem_wen) begin // 有写请求时
       pmem_write(waddr, wdata, wmask);
     end

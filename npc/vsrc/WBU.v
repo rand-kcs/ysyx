@@ -35,6 +35,9 @@ module WBU(
 
 assign csr_waddr_buf = csr_waddr;
 assign csr_wdata_buf = csr_wdata;
+assign gpr_wen_buf = gpr_wen;
+assign  rd_buf = rd;
+assign csr_wen_buf = csr_wen;
 
 
 assign valid_out_wbu = valid_in_lsu;

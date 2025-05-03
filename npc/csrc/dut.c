@@ -64,7 +64,7 @@ bool isa_difftest_checkregs(CPU_state *ref) {
     return false;
   }
 
-  //Log("Diff Check Pass\n");
+  Log("Diff Check Pass\n");
   return true;
 }
 

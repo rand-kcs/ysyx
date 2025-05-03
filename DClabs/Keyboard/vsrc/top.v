@@ -9,12 +9,12 @@ module top(
 	output ctrlLD
 );
 
-/*
+
 initial begin
 $dumpfile("wave.fst");
 $dumpvars();
 end
-*/
+
 
 reg [7:0] data;
 reg [7:0] data_prev;

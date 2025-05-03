@@ -15,6 +15,13 @@ module top(
 		output [31:0] rf_dbg [31:0]
 );
 
+
+//initial begin
+//$dumpfile("wave.fst");
+//$dumpvars();
+//end
+
+
 import "DPI-C" function int pmem_read(input int raddr);
 import "DPI-C" function void pmem_write(
   input int waddr, input int wdata, input byte wmask);
@@ -82,7 +89,7 @@ IFU ifu(
   .pc_buf(pc_ifu_idu),
   .inst(inst_ifu_idu)
 );
-
+assign inst = inst_ifu_idu;
 
   wire [31:0] pc_idu;
 	wire [4:0] rs1_idu;
@@ -283,7 +290,7 @@ LSU lsu(
   .alu_out_buf(alu_out_lsu)
 );
 
-WBU wbs(
+WBU wbu(
   .valid_in_lsu(valid_lsu_wbu), 
 
   .ben(ben_lsu),

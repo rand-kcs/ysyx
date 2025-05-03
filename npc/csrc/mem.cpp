@@ -10,15 +10,14 @@ void difftest_skip_ref();
 
 uint32_t img [] = {
 	0x00100093, // addi r1, r0, 1
-	0x34209073, // csrw mcaus, r1
-	0x34202173, // csrr r2,mcause
-
-  0x0000b113, // sltiu x2, x1, 0
-  0x00108133, // add x2, x1, x1
-	0x00108113, // addi r2, r1, 1
+  0x00108133, // addi x2, x1, x1
+  0x00100073, // ebreak;
 	0x0000a1b7, // lui x3, 10
+  0x0000b113, // sltiu x2, x1, 0
 	0x00001217, // auipc x4, 1<<12
 	0x004002ef, // jal x5, 4
+
+  
 	0x00428367, // jalr x6, 4(x5)
 	0x00100093, // addi r1, r0, 1
   0x0002a383, //  lw x7, 0(x5)
@@ -35,7 +34,9 @@ uint32_t img [] = {
   0x0062a223,    // sw x6,4(x5)
   0x0042a403,    // lw x8,4(x5)
   0x00028283,  // lb x5,0(x5)
-  0x00100073, // ebreak;
+  0x04300093, //addi x1, x0, 67
+	0x34209073, // csrw mcaus, r1
+	0x34202173, // csrr r2,mcause
 	0x000000,
 };
 
