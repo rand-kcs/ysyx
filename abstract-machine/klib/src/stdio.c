@@ -7,7 +7,7 @@
 
 // longest string one time is 128!
 int printf(const char *fmt, ...) {
-  char total[128];
+  char total[4096];
 	va_list ap;
 	va_start(ap, fmt);
 
@@ -23,7 +23,7 @@ int vsprintf(char *out, const char *fmt, va_list ap) {
 		 int d;
 		 char c;
 		 char *s;
-		 char tmp[128];
+		 char tmp[4096];
      int width = -1;
 		 while (*fmt){
 				if(*fmt == '%'){
@@ -54,6 +54,7 @@ int vsprintf(char *out, const char *fmt, va_list ap) {
               s = ctos(tmp, c);
               break;
           case 'x':              /* char */
+          case 'p':              /* char */
               /* need a cast here since va_arg only
                   takes fully promoted types */
               d = (uint32_t) va_arg(ap, int);
