@@ -64,7 +64,9 @@ int main(int argc, char** argv){
 	tb->final();
 	delete tb;
 
+  MRF_Log();
 
+  IRF_Log();
 	printf("Simulation Done.\n");
 	
 	return is_exit_status_bad();

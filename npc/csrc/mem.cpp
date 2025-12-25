@@ -1,3 +1,4 @@
+#include <cstdio>
 #define MEM_HEADER
 #include <cstdint>
 #include <cmath>
@@ -9,16 +10,22 @@
 void difftest_skip_ref();
 
 uint32_t img [] = {
-	0x00100093, // addi r1, r0, 1
-  0x00108133, // addi x2, x1, x1
-  0x00100073, // ebreak;
-	0x0000a1b7, // lui x3, 10
-  0x0000b113, // sltiu x2, x1, 0
-	0x00001217, // auipc x4, 1<<12
+	// 0x00100093, // addi r1, r0, 1
+	//  0x00108133, // addi x2, x1, x1
+	// 0x0000a1b7, // lui x3, 10
+	//  0x0000b113, // sltiu x2, x1, 0
+	// 0x00001217, // auipc x4, 1<<12
 	0x004002ef, // jal x5, 4
-
+  0x00c28293, //addi x5, x5, 12
+  0x30529073, //csrrw x0, mtvec, x5
+  0x00000073, //ecall
   
+	0x004002ef, // jal x5, 4
+  0x01028293,// addi x5, x5, 16
+  0x34129073, // csrrw x0, mepc, x5
+  0x30200073, // mret
 	0x00428367, // jalr x6, 4(x5)
+	0x00100073, // ebreak;
 	0x00100093, // addi r1, r0, 1
   0x0002a383, //  lw x7, 0(x5)
   0x00029383, // lh x7, 0(x5)
@@ -65,7 +72,10 @@ int pmem_read_trace(int addr) {
 
 static uint32_t *rtc_port_base[2];
 extern "C" int pmem_read(int addr) {
-  log_write("[npc]: Reading addr 0x%08x\n", addr);
+  //log_write("[npc]: Reading addr 0x%08x\n", addr);
+  char holder[256];
+  sprintf(holder,"[npc]: Reading addr 0x%08x\n", addr);
+  RF_Write(&mring_buf, holder);
 
   if(addr == RTC_ADDR){
     difftest_skip_ref();
@@ -99,6 +109,10 @@ extern "C" void pmem_write(int waddr, int wdata, char wmask) {
   // `wmask`中每比特表示`wdata`中1个字节的掩码,
   // 如`wmask = 0x3`代表只写入最低2个字节, 内存中的其它字节保持不变
   //
+  char holder[256];
+  sprintf(holder,"[npc]: Writing addr 0x%08x\n", waddr);
+  RF_Write(&mring_buf, holder);
+
   if(waddr == SERIAL_PORT){
     difftest_skip_ref();
     Assert(wmask == 0x1, "Writing more than char at once");

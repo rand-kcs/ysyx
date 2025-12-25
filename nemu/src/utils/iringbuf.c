@@ -10,12 +10,15 @@ void IRF_Write(char* s){
 }
 
 void IRF_Log(){
-	log_write("IRING BUFFER OUT: \n");
+	log_write("\n\nLast %d Inst Executed:\n", RING_LEN);
+  int end  = iring_buf.index;
 	for(int i = 0; i < RING_LEN; i++) {
-		log_write("%s", iring_buf.ring_buf[i]); 
-		if(i == (iring_buf.index + RING_LEN - 1)%RING_LEN)
-			log_write("<----end at here");
-		log_write("\n");
+    printf("Str: %s, Len: %ld", iring_buf.ring_buf[end],strlen(iring_buf.ring_buf[end]));
+    if(strlen(iring_buf.ring_buf[end]) > 0) {
+      log_write("%s", iring_buf.ring_buf[end]); 
+      log_write("\n");
+    }
+    end = (end+1) % RING_LEN;
 	}
 }
 

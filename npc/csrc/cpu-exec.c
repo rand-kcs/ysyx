@@ -6,6 +6,7 @@
 #include "svdpi.h"
 #include "difftest.h"
 #include "Vtop__Dpi.h"
+#include <cstdio>
 #define MAX_INST_TO_PRINT 10
 
 CPU_state cpu = {};
@@ -22,21 +23,22 @@ uint32_t get_pc(){
 
 
 
+static char holder[1024];
 static void trace() {
   /*---- Instruction Trace ---- */
   #ifdef ITRACE
-	log_write("0x%08x : ", tb->pc);
   uint32_t cur_inst = pmem_read_trace(tb->pc);
-	log_write("0x%08x ", cur_inst);
 
   char p[1024];
   memset(p, '\0', 1024);
-
   void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
   disassemble(p, sizeof(p),
       tb->pc, (uint8_t *)&cur_inst, 4);
 
-  log_write(" %s\n",p);
+  holder[0]  = '\0';
+  sprintf(holder,"0x%08x : ""0x%08x "" %s\n", tb->pc, cur_inst, p);
+  RF_Write(&iring_buf, holder);
+  
   // if(g_print_step) 
   // change to always print 
 	//printf("sdb: 0x%08x : 0x%08x     %s\n", tb->pc, cur_inst, p);
@@ -45,14 +47,15 @@ static void trace() {
   
 }
 
-
 static void exec_once() {
   //tb->inst = pmem_read(tb->pc);
 
   trace();
-
 	single_cycle();
-  printf("One inst execute state: %x\n", tb->done);
+  while(!tb->done){
+	  single_cycle();
+  }
+  //printf("One inst execute state: %x\n", tb->done);
   //printf("Test ALU_imm_input: 0x%08x\n", tb->top->eu->imm);
   //print_reg_status();
   //printf("Test IDU_Wen: 0x%08x\n", tb->top->idu->wen);
@@ -65,7 +68,6 @@ static void exec_once() {
 
   #ifdef DIFFTEST
   /* difftest */
-  if(tb->done)
     difftest_step(tb->pc, tb->pc);
   #endif
 

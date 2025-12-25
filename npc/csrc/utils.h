@@ -1,10 +1,26 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include "mem.h"
 #define FMT_WORD  "0x%08" PRIx32
 
 extern "C" bool log_enable(); 
+
+
+#define  RING_LEN 20
+typedef struct{
+	uint32_t index;
+	char ring_buf[RING_LEN][128];
+} RingBuf;
+
+void RF_Write(RingBuf* rb, char* s);
+void IRF_Log();
+void MRF_Log();
+
+extern RingBuf iring_buf ;
+extern RingBuf mring_buf ;
+
 
 #define Log(format, ...) \
      _Log(ANSI_FMT("[%s:%d %s] " format, ANSI_FG_BLUE) "\n", \
