@@ -7,6 +7,31 @@ module IFU (
   input [31:0]  pc,           /// Communicate with PC_reg;
   input done,
   //output reg ready_out_pc,
+  
+  // AXI4-lite
+  output reg [31:0] araddr,
+  output arvalid,
+  input arready,
+
+  input [31:0] rdata,
+  input [1:0] rresp,
+  input rvalid,
+  output rready,
+
+  // Not use
+  output [31:0] awaddr,
+  output awvalid,
+  input awready,
+
+  output [31:0] wdata,
+  output [3:0] wstrb,
+  output wvalid,
+  input wready,
+
+  input [1:0] bresp,
+  input bvalid,
+  output bready
+
 
   input ready_in_idu,         // Communicate with IDU;
   output valid_out_idu,       // From IDU  
@@ -14,13 +39,19 @@ module IFU (
   output reg [31:0] inst      // To IDU     
 );
 
+assign awvalid = 0;
+assign wvalid = 0;
+assign bready = 0;
+
 import "DPI-C" function int pmem_read(input int raddr);
 import "DPI-C" function void pmem_write(
   input int waddr, input int wdata, input byte wmask);
 
 
 parameter IDLE       = 2'b00;
-parameter WAIT_READY = 2'b01;
+parameter WAIT_ADDR  = 2'b01;
+parameter WAIT_DATA  = 2'b10;
+parameter WAIT_IDU   = 2'b11;
 
 reg [1:0] next_state;
 reg [1:0] current_state;
@@ -35,10 +66,20 @@ always@(*) begin
   case (current_state)
     IDLE : begin
       if(done) begin
-        next_state = WAIT_READY;
+        next_state = WAIT_ADDR;
       end
     end
-    WAIT_READY : begin
+    WAIT_ADDR : begin
+      if(arready) begin
+        next_state = WAIT_DATA; 
+      end
+    end
+    WAIT_DATA : begin
+      if(rvalid) begin
+        next_state = WAIT_IDU; 
+      end
+    end
+    WAIT_IDU : begin
       if(ready_in_idu) begin
         next_state = IDLE; 
       end
@@ -49,11 +90,17 @@ always@(*) begin
 end
 
 // output reley on state
-assign valid_out_idu  = current_state === WAIT_READY ;
+assign valid_out_idu  = current_state === WAIT_IDU ;
+assign arvalid = current_state === WAIT_ADDR;
+assign rready = current_state === WAIT_DATA;
+
 always@(posedge clk) begin
-  if(current_state === IDLE && next_state === WAIT_READY) begin  // 等价于 状态恰好转移
+  if(current_state === IDLE && next_state === WAIT_ADDR) begin  // 等价于 状态恰好转移
     pc_buf <= pc;
-    inst <= pmem_read(pc);
+    araddr <= pc;
+  end
+  else if(current_state === WAIT_DATA && next_state === WAIT_IDU) begin  // 等价于 状态恰好转移
+    inst <= rdata;
   end
 end
 

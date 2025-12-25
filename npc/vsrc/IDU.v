@@ -87,7 +87,7 @@ assign ready_out_ifu = current_state === IDLE;
 assign valid_out_exu = current_state === WAIT_READY;
 
 always@(posedge clk) begin
-  if (current_state === IDLE && next_state === WAIT_READY) begin  // 状态恰好转移
+  if (current_state === IDLE && next_state === WAIT_READY) begin  // 状态恰好转移 将判断逻辑改为 valid_in_ifu && ready_out_ifu 会更直观
     pc_buf <= pc;
     rs1_buf <= rs1;
     rs2_buf <= rs2;

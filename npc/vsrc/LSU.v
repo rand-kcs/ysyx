@@ -2,6 +2,30 @@ module LSU(
   input clk,
   input rst,
 
+  // AXI4-lite
+  output reg [31:0] araddr,
+  output arvalid,
+  input arready,
+
+  input [31:0] rdata,
+  input [1:0] rresp,
+  input rvalid,
+  output rready,
+
+  output [31:0] awaddr,
+  output awvalid,
+  input awready,
+
+  output [31:0] wdata,
+  output [3:0] wstrb,
+  output wvalid,
+  input wready,
+
+  input [1:0] bresp,
+  input bvalid,
+  output bready
+
+
   input valid_in_exu,
   output ready_out_exu,
 
@@ -110,6 +134,10 @@ end
 
 reg [31:0] rdata;
 wire [31:0] rdata_w;
+
+
+
+
 
 always @(mem_ren, raddr, waddr, wdata, wmask, mem_wen) begin
   if (valid_in_exu) begin

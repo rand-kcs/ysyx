@@ -66,17 +66,51 @@ CSRs #(12, 32) csrs(
   .waddr(csr_waddr_wbu),
   .wdata(csr_wdata_wbu),
   .wen(csr_wen_wbu),
-  .is_ecall(is_ecall_wbu),
-  .is_mret(is_mret_wbu),
+  .is_ecall_wbu(is_ecall_wbu),
+  .is_mret_wbu(is_mret_wbu),
   .pc(pc_wbu),
 
+  .is_ecall_idu(is_ecall_idu),
+  .is_mret_idu(is_mret_idu),
   .raddr(csr_waddr_idu),
   .data(csr_out_idu)
+);
+
+
+wire [31:0] araddr_ifu;
+wire arvalid_ifu;
+wire arready_ifu;
+wire [31:0] rdata_ifu;
+wire [1:0] rresp_ifu;
+wire rvalid_ifu;
+wire rready_ifu;
+
+SRAM mem_inst(
+  .clk(clk), 
+  .rst(rst),
+
+  .araddr(araddr_ifu),
+  .arvalid(arvalid_ifu),
+  .arready(arready_ifu),
+
+  .rdata(rdata_ifu),
+  .rresp(rresp_ifu),
+  .rvalid(rvalid_ifu),
+  .rready(rready_ifu)
 );
 
 IFU ifu(
   .clk(clk), 
   .rst(rst), 
+
+  .araddr(araddr_ifu),
+  .arvalid(arvalid_ifu),
+  .arready(arready_ifu),
+
+  .rdata(rdata_ifu),
+  .rresp(rresp_ifu),
+  .rvalid(rvalid_ifu),
+  .rready(rready_ifu),
 
   .ready_in_idu(ready_idu_ifu), 
   .valid_out_idu(valid_ifu_idu), 
