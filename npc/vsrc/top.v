@@ -85,7 +85,7 @@ wire [1:0] rresp_ifu;
 wire rvalid_ifu;
 wire rready_ifu;
 
-SRAM mem_inst(
+DRAM mem_inst(
   .clk(clk), 
   .rst(rst),
 
