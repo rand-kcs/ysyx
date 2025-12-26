@@ -16,10 +16,11 @@ module top(
 );
 
 
-//initial begin
-//$dumpfile("wave.fst");
-//$dumpvars();
-//end
+initial begin
+$dumpfile("wave.fst");
+$dumpvars();
+end
+
 
 
 import "DPI-C" function int pmem_read(input int raddr);
