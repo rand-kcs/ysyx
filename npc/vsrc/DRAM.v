@@ -1,28 +1,33 @@
-module SRAM(
+module DRAM(
   input clk,
   input rst,
 
+  // read address path  -->
   input reg [31:0] araddr,
   input arvalid,
   output arready,
 
+  // read data path  <--
   output [31:0] rdata,
   output [1:0] rresp,
   output rvalid,
-  input rready,
+  input rready
 
-  input [31:0] awaddr,
-  input awvalid,
-  output awready,
+//  // write address path  -->
+ // input [31:0] awaddr,
+ // input awvalid,
+ // output awready,
 
-  input [31:0] wdata,
-  input [3:0] wstrb,
-  input wvalid,
-  output wready,
+ // // write data path  -->
+ // input [31:0] wdata,
+ // input [3:0] wstrb,
+ // input wvalid,
+ // output wready,
 
-  output [1:0] bresp,
-  output bvalid,
-  input bready
+ // // io status path  <--
+ // output [1:0] bresp,
+ // output bvalid,
+ // input bready
 );
 
 import "DPI-C" function int pmem_read(input int raddr);
