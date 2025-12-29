@@ -23,7 +23,7 @@ module LSU(
 
   input [1:0] bresp,
   input bvalid,
-  output bready
+  output bready,
 
 
   input valid_in_exu,
