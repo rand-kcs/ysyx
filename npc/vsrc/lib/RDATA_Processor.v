@@ -1,3 +1,4 @@
+// 将DRAM读入的数据按照指令要求 切割或展开 Read DATA Processor
 module RDATA_Processor(
   input [31:0] rdata,
   input [2:0] func3,
