@@ -64,9 +64,20 @@ ifeq ($(WAVETRACE), 1)
 	TRACEFLAG= --trace-fst
 endif
 
+# 默认值：显示所有警告（不抑制）
+SUPPRESS_PIN_WARN ?= 0
+VERILATOR_FLAGS = -Wall
+
+# 根据 SUPPRESS_PIN_WARN 变量的值添加选项
+ifeq ($(SUPPRESS_PIN_WARN),1)
+    VERILATOR_FLAGS += -Wno-PINCONNECTEMPTY -Wno-PINMISSING -Wno-CASEINCOMPLETE
+    $(info # PINCONNECTEMPTY warnings are SUPPRESSED)
+else
+    $(info # PINCONNECTEMPTY warnings are ENABLED)
+endif
 
 run:
-	$(VERILATOR) --public --cc --exe --build -j 0 -Wall -timing  $(TRACEFLAG) $(NEW_LDFLAGS) $(NEW_CXXFLAGS)  $(CXXSRC)  vsrc/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
+	$(VERILATOR) --public --cc --exe --build -j 0 $(VERILATOR_FLAGS) -timing  $(TRACEFLAG) $(NEW_LDFLAGS) $(NEW_CXXFLAGS)  $(CXXSRC)  vsrc/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
 	./build/Vtop  --log=$(BUILD_DIR)/npc-log.txt --diff=ref/riscv32-nemu-interpreter-so $(ARGS) $(IMG) 
  
 clean:
