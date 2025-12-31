@@ -276,6 +276,66 @@ wire [31:0] alu_out_lsu;
 wire is_ecall_lsu;
 wire is_mret_lsu;
 
+    // ========== 声明共享的AXI4-Lite信号 ==========
+    // 这些信号将连接LSU（主设备）和DRAM2（从设备）
+    wire [31:0] araddr;    // 读地址
+    wire        arvalid;   // 读地址有效
+    wire        arready;   // 读地址就绪
+    
+    wire [31:0] rdata;     // 读数据
+    wire [1:0]  rresp;     // 读响应
+    wire        rvalid;    // 读数据有效
+    wire        rready;    // 读数据就绪
+    
+    wire [31:0] awaddr;    // 写地址
+    wire        awvalid;   // 写地址有效
+    wire        awready;   // 写地址就绪
+    
+    wire [31:0] wdata;     // 写数据
+    wire [3:0]  wstrb;     // 写字节使能
+    wire        wvalid;    // 写数据有效
+    wire        wready;    // 写数据就绪
+    
+    wire [1:0]  bresp;     // 写响应
+    wire        bvalid;    // 写响应有效
+    wire        bready;    // 写响应就绪
+
+
+
+// AXI4-lite
+ // ========== DRAM2实例化（保持不变） ==========
+DRAM2 dram2(
+    .clk(clk), 
+    .rst(rst), 
+    
+    // read address path -->
+    .araddr(araddr),
+    .arvalid(arvalid),
+    .arready(arready),
+
+    // read data path <--
+    .rdata(rdata),
+    .rresp(rresp),
+    .rvalid(rvalid),
+    .rready(rready),
+
+    // write address path -->
+    .awaddr(awaddr),
+    .awvalid(awvalid),
+    .awready(awready),
+
+    // write data path -->
+    .wdata(wdata),
+    .wstrb(wstrb),
+    .wvalid(wvalid),
+    .wready(wready),
+
+    // write response path <--
+    .bresp(bresp),
+    .bvalid(bvalid),
+    .bready(bready)
+);
+
 
 LSU lsu(
   .clk(clk), 
@@ -286,6 +346,28 @@ LSU lsu(
 
   .valid_out_wbu(valid_lsu_wbu), 
 
+// AXI4-Lite接口 - 连接到共享信号
+ .araddr(araddr),     // LSU输出 -> DRAM2输入
+ .arvalid(arvalid),   // LSU输出 -> DRAM2输入
+ .arready(arready),   // LSU输入 <- DRAM2输出
+ 
+ .rdata(rdata),       // LSU输入 <- DRAM2输出
+ .rresp(rresp),       // LSU输入 <- DRAM2输出
+ .rvalid(rvalid),     // LSU输入 <- DRAM2输出
+ .rready(rready),     // LSU输出 -> DRAM2输入
+ 
+ .awaddr(awaddr),     // LSU输出 -> DRAM2输入
+ .awvalid(awvalid),   // LSU输出 -> DRAM2输入
+ .awready(awready),   // LSU输入 <- DRAM2输出
+ 
+ .wdata(wdata),       // LSU输出 -> DRAM2输入
+ .wstrb(wstrb),       // LSU输出 -> DRAM2输入
+ .wvalid(wvalid),     // LSU输出 -> DRAM2输入
+ .wready(wready),     // LSU输入 <- DRAM2输出
+ 
+ .bresp(bresp),       // LSU输入 <- DRAM2输出
+ .bvalid(bvalid),     // LSU输入 <- DRAM2输出
+ .bready(bready),     // LSU输出 -> DRAM2输入
 
   .ben(ben_exu),
   .pc(pc_exu),
@@ -306,7 +388,7 @@ LSU lsu(
   .mem_wen(mem_wen_exu),
   .alu_out(aluOut_exu), // 同时也是 aluout
   .wmask(wmask_exu),
-  .wdata(wdata_exu),
+  .wdata_exu(wdata_exu),
   .func3(func3_exu),
   .rd_buf(rd_lsu),
 
@@ -320,7 +402,7 @@ LSU lsu(
   .is_mret_buf(is_mret_lsu),
   .csr_waddr_buf(csr_waddr_lsu),
   .csr_wdata_buf(csr_wdata_lsu),
-  .rdata_w_buf(rdata_w_lsu),
+  .rdata_buf(rdata_w_lsu),
   .opcode_buf(opcode_lsu),
   .alu_out_buf(alu_out_lsu)
 );

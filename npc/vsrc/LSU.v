@@ -51,12 +51,13 @@ module LSU(
   input mem_wen,
   input [31:0] alu_out,
   input [7:0] wmask,
-  input [31:0] wdata,
+  input [31:0] wdata_exu,
   input [2:0] func3,
 
   output reg ben_buf,
   output reg [4:0] rd_buf,
   output reg [6:0] opcode_buf,
+
   output reg [31:0] pc_buf,
   output reg [31:0] csr_out_buf,
   output reg [31:0] alu_out_buf,
@@ -67,53 +68,148 @@ module LSU(
   output is_ecall_buf,
   output is_mret_buf,
 
-  output reg [31:0] rdata_w_buf
+  output reg [31:0] rdata_buf,
+  output reg [1:0] rresp_out,
+  output reg [1:0] bresp_out
 );
 
 wire [31:0] raddr;// 同时也是 aluout
 wire [31:0] waddr;
+reg [31:0] addr;
 
 assign raddr = alu_out;
 assign waddr = alu_out;
 
-import "DPI-C" function int pmem_read(input int raddr);
-import "DPI-C" function void pmem_write(
-  input int waddr, input int wdata, input byte wmask);
 
-parameter IDLE       = 2'b00;
-parameter WAIT_READY = 2'b01;
+// ========== 1. 状态定义与状态寄存器 ==========
+// 使用独热码(one-hot)或二进制码(binary)，用parameter定义状态名
+localparam [2:0] IDLE = 3'b00,
+                 WAIT_ARREADY = 3'b01,
+                 WAIT_RVALID = 3'b10,
+                 
+                 WAIT_WAWREADY= 3'b11,
+                 WAIT_WREADY = 3'b100,
+                 WAIT_AWREADY = 3'b101,
+                 WAIT_BVALID=3'b110,
 
-reg [1:0] next_state;
-reg [1:0] current_state;
+                 WAIT_WBU = 3'b111;
 
-// state trans reg;
-Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
+reg [2:0] next_state;
+reg [2:0] current_state;
+Reg #(3, IDLE) state(clk, rst, next_state, current_state, 1'b1);
 
-// state change logic : next_state
+// ========== 2. 次态逻辑（组合逻辑） ==========
 always@(*) begin
   next_state = current_state;
+
   case (current_state)
     IDLE : begin
       if(valid_in_exu) begin
-        next_state = WAIT_READY;
+        if(mem_ren) 
+          next_state = WAIT_ARREADY;
+        else if(mem_wen)
+          next_state = WAIT_WAWREADY;
+        else 
+          next_state = WAIT_WBU;
       end
     end
-    WAIT_READY : begin
-        next_state = IDLE; 
+
+    WAIT_ARREADY: begin
+      if(arready) 
+        next_state = WAIT_RVALID;
     end
+
+    WAIT_RVALID: begin
+      if(rvalid)
+        next_state = WAIT_WBU;
+    end
+
+    WAIT_WBU: begin
+      next_state = IDLE;
+    end
+
+    WAIT_WAWREADY: begin
+      if(awready && wready)
+        next_state = WAIT_BVALID;          
+      else if(awready)
+        next_state = WAIT_WREADY;
+      else if(wready)
+        next_state = WAIT_AWREADY;
+    end
+
+    WAIT_BVALID:
+      if(bvalid)
+        next_state = WAIT_WBU;
+
     default: 
         next_state = IDLE; 
   endcase
 end
 
-// output rely on specific state;
-assign ready_out_exu = current_state === IDLE;
-assign valid_out_wbu = current_state === WAIT_READY;
 
+// ========== 3. 输出逻辑 ==========
+// 摩尔型输出（输出仅取决于当前状态）
+always @(*) begin
+    // 对于EXU 和 WBU 沟通
+    ready_out_exu = 1'b0;
+    valid_out_wbu = 1'b0;
+
+    // 对于和DRAM 的沟通
+    arvalid =1'b0;
+    rready = 1'b0;
+    awvalid = 1'b0;
+    wvalid = 1'b0;
+    bready = 1'b0;
+
+    case (current_state)
+      IDLE: begin
+      // 对于EXU 和 WBU 沟通
+      ready_out_exu = 1'b1;
+      end
+
+      WAIT_WBU: begin 
+        valid_out_wbu = 1'b1;
+      end 
+
+      WAIT_ARREADY: begin
+        arvalid = 1'b1;
+      end
+
+      WAIT_RVALID:begin
+        rready = 1'b1;
+      end
+
+      WAIT_WAWREADY:begin
+        awvalid = 1'b1;
+        wvalid = 1'b1;
+      end
+      
+      WAIT_BVALID: begin
+        bready = 1'b1;
+      end
+
+      default: begin
+        ready_out_exu = 1'b0;
+        valid_out_wbu = 1'b0;
+
+        // 对于和DRAM 的沟通
+        arvalid =1'b0;
+        rready = 1'b0;
+        awvalid = 1'b0;
+        wvalid = 1'b0;
+        bready = 1'b0;
+      end
+    endcase
+end
+
+
+reg [31:0] wdata_exu_buf;
+
+// 握手成功时的信息传递
 always@(posedge clk) begin
-  if (current_state === IDLE && next_state === WAIT_READY) begin  // 状态恰好转移
-    rdata_w_buf <= rdata_w;
-
+  if (valid_in_exu && ready_out_exu) begin  // EXU -- IFU 之间的握手
+    //rdata_w_buf <= rdata_w;
+   
     // Direct Pass 
     ben_buf <= ben;
     opcode_buf <= opcode;
@@ -128,32 +224,42 @@ always@(posedge clk) begin
     csr_wdata_buf <= csr_wdata;
     is_ecall_buf <= is_ecall;
     is_mret_buf <= is_mret;
+    wdata_exu_buf <= wdata_exu;
   end
 end
 
+assign araddr = alu_out_buf;
+assign awaddr = alu_out_buf;
+assign wdata = wdata_exu_buf;
 
-reg [31:0] rdata;
+
+// rdata_w stands for treated after origin rdata from DRAM
 wire [31:0] rdata_w;
+RDATA_Processor rdata_processor(rdata, func3, rdata_w);
 
-
-
-
-
-always @(mem_ren, raddr, waddr, wdata, wmask, mem_wen) begin
-  if (valid_in_exu) begin
-    if(mem_ren) begin // 有读写请求时
-      rdata <= pmem_read(raddr);
-    end
-    if (mem_wen) begin // 有写请求时
-      pmem_write(waddr, wdata, wmask);
-    end
+always @(posedge clk) begin
+  if(rvalid && rready) begin
+    rdata_buf <= rdata_w;
+    rresp_out <= rresp;
   end
-  else begin
-    rdata <= 0;
-  end
+
+  if(bready && bvalid)
+    bresp_out <= bresp;
 end
 
 
-RDATA_Processor rdata_processor(rdata, func3, rdata_w);
+//always @(mem_ren, raddr, waddr, wdata, wmask, mem_wen) begin
+//  if (valid_in_exu) begin
+//    if(mem_ren) begin // 有读写请求时
+//      rdata <= pmem_read(raddr);
+//    end
+//    if (mem_wen) begin // 有写请求时
+//      pmem_write(waddr, wdata, wmask);
+//    end
+//  end
+//  else begin
+//    rdata <= 0;
+//  end
+//end
 
 endmodule

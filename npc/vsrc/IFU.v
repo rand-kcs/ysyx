@@ -18,30 +18,11 @@ module IFU (
   input rvalid,
   output rready,
 
-  // Not use
-  output [31:0] awaddr,
-  output awvalid,
-  input awready,
-
-  output [31:0] wdata,
-  output [3:0] wstrb,
-  output wvalid,
-  input wready,
-
-  input [1:0] bresp,
-  input bvalid,
-  output bready
-
-
   input ready_in_idu,         // Communicate with IDU;
   output valid_out_idu,       // From IDU  
   output reg [31:0] pc_buf,
   output reg [31:0] inst      // To IDU     
 );
-
-assign awvalid = 0;
-assign wvalid = 0;
-assign bready = 0;
 
 import "DPI-C" function int pmem_read(input int raddr);
 import "DPI-C" function void pmem_write(
@@ -99,7 +80,7 @@ always@(posedge clk) begin
     pc_buf <= pc;
     araddr <= pc;
   end
-  else if(current_state === WAIT_DATA && next_state === WAIT_IDU) begin  // 等价于 状态恰好转移
+  else if(current_state === WAIT_DATA && next_state === WAIT_IDU) begin  // 等价于 状态恰好转移 握手成功
     inst <= rdata;
   end
 end
