@@ -1,3 +1,12 @@
+`define NULL_TYPE 3'b000
+`define R_TYPE 3'b001
+`define I_TYPE 3'd2
+`define S_TYPE 3'd3
+`define B_TYPE 3'd4
+`define U_TYPE 3'd5
+`define J_TYPE 3'd6
+
+
 module IDU (
   input clk,
   input rst,

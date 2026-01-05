@@ -23,10 +23,6 @@ end
 
 
 
-import "DPI-C" function int pmem_read(input int raddr);
-import "DPI-C" function void pmem_write(
-  input int waddr, input int wdata, input byte wmask);
-
 export "DPI-C" function ebreakYes;
 
 function ebreakYes;
@@ -58,7 +54,9 @@ wire [31:0] src1_gpr, src2_gpr;
 wire [31:0] csr_out_idu;
 RegisterFile #(5, 32) gprs(.clk(clk), .wdata(gpr_wdata_wbu),  .valid_wbu(valid_wbu),
   .waddr(rd_wbu), .wen(gpr_wen_wbu), .rs1(rs1_idu), .rs2(rs2_idu), 
-  .src1(src1_gpr), .src2(src2_gpr), .dbg_rf(rf_dbg));
+  .src1(src1_gpr), .src2(src2_gpr),
+  .dbg_rf(rf_dbg)
+);
 
 CSRs #(12, 32) csrs(
   .clk(clk), .rst(rst), 
@@ -78,52 +76,57 @@ CSRs #(12, 32) csrs(
 );
 
 
-wire [31:0] araddr_ifu;
-wire arvalid_ifu;
-wire arready_ifu;
-wire [31:0] rdata_ifu;
-wire [1:0] rresp_ifu;
-wire rvalid_ifu;
-wire rready_ifu;
+// ========== 信号声明 ==========
+// IFU到ARBITER的连接信号
+wire [31:0] ifu_araddr;
+wire ifu_arvalid;
+wire ifu_arready;
+wire [31:0] ifu_rdata;
+wire [1:0] ifu_rresp;
+wire ifu_rvalid;
+wire ifu_rready;
 
-DRAM mem_inst(
-  .clk(clk), 
-  .rst(rst),
-
-  .araddr(araddr_ifu),
-  .arvalid(arvalid_ifu),
-  .arready(arready_ifu),
-
-  .rdata(rdata_ifu),
-  .rresp(rresp_ifu),
-  .rvalid(rvalid_ifu),
-  .rready(rready_ifu)
-);
-
+// ========== IFU实例化 ==========
 IFU ifu(
   .clk(clk), 
   .rst(rst), 
-
-  .araddr(araddr_ifu),
-  .arvalid(arvalid_ifu),
-  .arready(arready_ifu),
-
-  .rdata(rdata_ifu),
-  .rresp(rresp_ifu),
-  .rvalid(rvalid_ifu),
-  .rready(rready_ifu),
-
+  
+  // AXI接口连接到ARBITER
+  .araddr(ifu_araddr),
+  .arvalid(ifu_arvalid),
+  .arready(ifu_arready),
+  
+  .rdata(ifu_rdata),
+  .rresp(ifu_rresp),
+  .rvalid(ifu_rvalid),
+  .rready(ifu_rready),
+  
+  // IFU没有写操作，所以写相关信号不连接或固定为0
+  // 如果IFU模块有这些端口，需要接地
+  // .awaddr(32'b0),
+  // .awvalid(1'b0),
+  // .awready(),
+  // .wdata(32'b0),
+  // .wstrb(4'b0),
+  // .wvalid(1'b0),
+  // .wready(),
+  // .bresp(),
+  // .bvalid(),
+  // .bready(1'b0),
+  
   .ready_in_idu(ready_idu_ifu), 
   .valid_out_idu(valid_ifu_idu), 
-
+  
   // input
   .pc(pc), 
   .done(done), 
-
+  
   // output
   .pc_buf(pc_ifu_idu),
   .inst(inst_ifu_idu)
 );
+
+
 assign inst = inst_ifu_idu;
 
   wire [31:0] pc_idu;
@@ -276,99 +279,133 @@ wire [31:0] alu_out_lsu;
 wire is_ecall_lsu;
 wire is_mret_lsu;
 
-    // ========== 声明共享的AXI4-Lite信号 ==========
-    // 这些信号将连接LSU（主设备）和DRAM2（从设备）
-    wire [31:0] araddr;    // 读地址
-    wire        arvalid;   // 读地址有效
-    wire        arready;   // 读地址就绪
-    
-    wire [31:0] rdata;     // 读数据
-    wire [1:0]  rresp;     // 读响应
-    wire        rvalid;    // 读数据有效
-    wire        rready;    // 读数据就绪
-    
-    wire [31:0] awaddr;    // 写地址
-    wire        awvalid;   // 写地址有效
-    wire        awready;   // 写地址就绪
-    
-    wire [31:0] wdata;     // 写数据
-    wire [3:0]  wstrb;     // 写字节使能
-    wire        wvalid;    // 写数据有效
-    wire        wready;    // 写数据就绪
-    
-    wire [1:0]  bresp;     // 写响应
-    wire        bvalid;    // 写响应有效
-    wire        bready;    // 写响应就绪
+//    // ========== 声明共享的AXI4-Lite信号 ==========
+//    // 这些信号将连接LSU（主设备）和DRAM2（从设备）
+//    wire [31:0] araddr;    // 读地址
+//    wire        arvalid;   // 读地址有效
+//    wire        arready;   // 读地址就绪
+//    
+//    wire [31:0] rdata;     // 读数据
+//    wire [1:0]  rresp;     // 读响应
+//    wire        rvalid;    // 读数据有效
+//    wire        rready;    // 读数据就绪
+//    
+//    wire [31:0] awaddr;    // 写地址
+//    wire        awvalid;   // 写地址有效
+//    wire        awready;   // 写地址就绪
+//    
+//    wire [31:0] wdata;     // 写数据
+//    wire [3:0]  wstrb;     // 写字节使能
+//    wire        wvalid;    // 写数据有效
+//    wire        wready;    // 写数据就绪
+//    
+//    wire [1:0]  bresp;     // 写响应
+//    wire        bvalid;    // 写响应有效
+//    wire        bready;    // 写响应就绪
 
+// LSU到ARBITER的连接信号
+wire [31:0] lsu_araddr;
+wire lsu_arvalid;
+wire lsu_arready;
+wire [31:0] lsu_rdata;
+wire [1:0] lsu_rresp;
+wire lsu_rvalid;
+wire lsu_rready;
+wire [31:0] lsu_awaddr;
+wire lsu_awvalid;
+wire lsu_awready;
+wire [31:0] lsu_wdata;
+wire [3:0] lsu_wstrb;
+wire lsu_wvalid;
+wire lsu_wready;
+wire [1:0] lsu_bresp;
+wire lsu_bvalid;
+wire lsu_bready;
 
+// ARBITER到DRAM2的连接信号
+wire [31:0] arbiter_s_araddr;
+wire arbiter_s_arvalid;
+wire arbiter_s_arready;
+wire [31:0] arbiter_s_rdata;
+wire [1:0] arbiter_s_rresp;
+wire arbiter_s_rvalid;
+wire arbiter_s_rready;
+wire [31:0] arbiter_s_awaddr;
+wire arbiter_s_awvalid;
+wire arbiter_s_awready;
+wire [31:0] arbiter_s_wdata;
+wire [3:0] arbiter_s_wstrb;
+wire arbiter_s_wvalid;
+wire arbiter_s_wready;
+wire [1:0] arbiter_s_bresp;
+wire arbiter_s_bvalid;
+wire arbiter_s_bready;
 
-// AXI4-lite
- // ========== DRAM2实例化（保持不变） ==========
+// ========== DRAM2实例化 ==========
 DRAM2 dram2(
-    .clk(clk), 
-    .rst(rst), 
-    
-    // read address path -->
-    .araddr(araddr),
-    .arvalid(arvalid),
-    .arready(arready),
-
-    // read data path <--
-    .rdata(rdata),
-    .rresp(rresp),
-    .rvalid(rvalid),
-    .rready(rready),
-
-    // write address path -->
-    .awaddr(awaddr),
-    .awvalid(awvalid),
-    .awready(awready),
-
-    // write data path -->
-    .wdata(wdata),
-    .wstrb(wstrb),
-    .wvalid(wvalid),
-    .wready(wready),
-
-    // write response path <--
-    .bresp(bresp),
-    .bvalid(bvalid),
-    .bready(bready)
+  .clk(clk), 
+  .rst(rst), 
+  
+  // read address path -->
+  .araddr(arbiter_s_araddr),
+  .arvalid(arbiter_s_arvalid),
+  .arready(arbiter_s_arready),
+  
+  // read data path <--
+  .rdata(arbiter_s_rdata),
+  .rresp(arbiter_s_rresp),
+  .rvalid(arbiter_s_rvalid),
+  .rready(arbiter_s_rready),
+  
+  // write address path -->
+  .awaddr(arbiter_s_awaddr),
+  .awvalid(arbiter_s_awvalid),
+  .awready(arbiter_s_awready),
+  
+  // write data path -->
+  .wdata(arbiter_s_wdata),
+  .wstrb(arbiter_s_wstrb),
+  .wvalid(arbiter_s_wvalid),
+  .wready(arbiter_s_wready),
+  
+  // write response path <--
+  .bresp(arbiter_s_bresp),
+  .bvalid(arbiter_s_bvalid),
+  .bready(arbiter_s_bready)
 );
 
-
+// ========== LSU实例化 ==========
 LSU lsu(
   .clk(clk), 
   .rst(rst), 
-
+  
   .valid_in_exu(valid_exu_lsu), 
   .ready_out_exu(ready_lsu_exu),
-
   .valid_out_wbu(valid_lsu_wbu), 
-
-// AXI4-Lite接口 - 连接到共享信号
- .araddr(araddr),     // LSU输出 -> DRAM2输入
- .arvalid(arvalid),   // LSU输出 -> DRAM2输入
- .arready(arready),   // LSU输入 <- DRAM2输出
- 
- .rdata(rdata),       // LSU输入 <- DRAM2输出
- .rresp(rresp),       // LSU输入 <- DRAM2输出
- .rvalid(rvalid),     // LSU输入 <- DRAM2输出
- .rready(rready),     // LSU输出 -> DRAM2输入
- 
- .awaddr(awaddr),     // LSU输出 -> DRAM2输入
- .awvalid(awvalid),   // LSU输出 -> DRAM2输入
- .awready(awready),   // LSU输入 <- DRAM2输出
- 
- .wdata(wdata),       // LSU输出 -> DRAM2输入
- .wstrb(wstrb),       // LSU输出 -> DRAM2输入
- .wvalid(wvalid),     // LSU输出 -> DRAM2输入
- .wready(wready),     // LSU输入 <- DRAM2输出
- 
- .bresp(bresp),       // LSU输入 <- DRAM2输出
- .bvalid(bvalid),     // LSU输入 <- DRAM2输出
- .bready(bready),     // LSU输出 -> DRAM2输入
-
+  
+  // AXI4-Lite接口 - 连接到ARBITER
+  .araddr(lsu_araddr),     
+  .arvalid(lsu_arvalid),   
+  .arready(lsu_arready),   
+  
+  .rdata(lsu_rdata),       
+  .rresp(lsu_rresp),       
+  .rvalid(lsu_rvalid),     
+  .rready(lsu_rready),     
+  
+  .awaddr(lsu_awaddr),     
+  .awvalid(lsu_awvalid),   
+  .awready(lsu_awready),   
+  
+  .wdata(lsu_wdata),       
+  .wstrb(lsu_wstrb),       
+  .wvalid(lsu_wvalid),     
+  .wready(lsu_wready),     
+  
+  .bresp(lsu_bresp),       
+  .bvalid(lsu_bvalid),     
+  .bready(lsu_bready),     
+  
   .ben(ben_exu),
   .pc(pc_exu),
   .csr_out(csr_out_exu),
@@ -376,22 +413,22 @@ LSU lsu(
   
   .gpr_wen(gpr_wen_exu),
   .rd(rd_exu),
-
+  
   .csr_wen(csr_wen_exu),
   .csr_waddr(csr_waddr_exu),
   .csr_wdata(csr_wdata_exu),
   .is_ecall(is_ecall_exu),
   .is_mret(is_mret_exu),
-
+  
   // LSU自己用的
   .mem_ren(mem_ren_exu),
   .mem_wen(mem_wen_exu),
-  .alu_out(aluOut_exu), // 同时也是 aluout
+  .alu_out(aluOut_exu),
   .wmask(wmask_exu),
   .wdata_exu(wdata_exu),
   .func3(func3_exu),
   .rd_buf(rd_lsu),
-
+  
   // output
   .ben_buf(ben_lsu),
   .pc_buf(pc_lsu),
@@ -404,7 +441,101 @@ LSU lsu(
   .csr_wdata_buf(csr_wdata_lsu),
   .rdata_buf(rdata_w_lsu),
   .opcode_buf(opcode_lsu),
-  .alu_out_buf(alu_out_lsu)
+  .alu_out_buf(alu_out_lsu),
+
+
+  .rresp_out(),
+  .bresp_out()
+);
+
+// ========== ARBITER实例化 ==========
+ARBITER arbiter(
+  .clk(clk),
+  .rst(rst),
+  
+  // 主设备0接口 (Master 0) - 分配给IFU
+  // 读地址通道
+  .m0_araddr(ifu_araddr),
+  .m0_arvalid(ifu_arvalid),
+  .m0_arready(ifu_arready),
+  
+  // 读数据通道
+  .m0_rdata(ifu_rdata),
+  .m0_rresp(ifu_rresp),
+  .m0_rvalid(ifu_rvalid),
+  .m0_rready(ifu_rready),
+  
+  // 写地址通道 - IFU没有写操作，接地
+  .m0_awaddr(32'b0),
+  .m0_awvalid(1'b0),
+  .m0_awready(),  // 悬空，不连接
+  
+  // 写数据通道 - IFU没有写操作，接地
+  .m0_wdata(32'b0),
+  .m0_wstrb(4'b0),
+  .m0_wvalid(1'b0),
+  .m0_wready(),   // 悬空，不连接
+  
+  // 写响应通道 - IFU没有写操作，接地
+  .m0_bresp(),    // 悬空，不连接
+  .m0_bvalid(),   // 悬空，不连接
+  .m0_bready(1'b0),
+  
+  // 主设备1接口 (Master 1) - 分配给LSU
+  // 读地址通道
+  .m1_araddr(lsu_araddr),
+  .m1_arvalid(lsu_arvalid),
+  .m1_arready(lsu_arready),
+  
+  // 读数据通道
+  .m1_rdata(lsu_rdata),
+  .m1_rresp(lsu_rresp),
+  .m1_rvalid(lsu_rvalid),
+  .m1_rready(lsu_rready),
+  
+  // 写地址通道
+  .m1_awaddr(lsu_awaddr),
+  .m1_awvalid(lsu_awvalid),
+  .m1_awready(lsu_awready),
+  
+  // 写数据通道
+  .m1_wdata(lsu_wdata),
+  .m1_wstrb(lsu_wstrb),
+  .m1_wvalid(lsu_wvalid),
+  .m1_wready(lsu_wready),
+  
+  // 写响应通道
+  .m1_bresp(lsu_bresp),
+  .m1_bvalid(lsu_bvalid),
+  .m1_bready(lsu_bready),
+  
+  // 从设备接口 (Slave) - 连接到DRAM2
+  // 读地址通道
+  .s_araddr(arbiter_s_araddr),
+  .s_arvalid(arbiter_s_arvalid),
+  .s_arready(arbiter_s_arready),
+  
+  // 读数据通道
+  .s_rdata(arbiter_s_rdata),
+  .s_rresp(arbiter_s_rresp),
+  .s_rvalid(arbiter_s_rvalid),
+  .s_rready(arbiter_s_rready),
+  
+  // 写地址通道
+  .s_awaddr(arbiter_s_awaddr),
+  .s_awvalid(arbiter_s_awvalid),
+  .s_awready(arbiter_s_awready),
+  
+  // 写数据通道
+  .s_wdata(arbiter_s_wdata),
+  .s_wstrb(arbiter_s_wstrb),
+  .s_wvalid(arbiter_s_wvalid),
+  .s_wready(arbiter_s_wready),
+  
+  // 写响应通道
+  .s_bresp(arbiter_s_bresp),
+  .s_bvalid(arbiter_s_bvalid),
+  .s_bready(arbiter_s_bready)
 );
 
 WBU wbu(

@@ -24,10 +24,6 @@ module IFU (
   output reg [31:0] inst      // To IDU     
 );
 
-import "DPI-C" function int pmem_read(input int raddr);
-import "DPI-C" function void pmem_write(
-  input int waddr, input int wdata, input byte wmask);
-
 
 parameter IDLE       = 2'b00;
 parameter WAIT_ADDR  = 2'b01;
