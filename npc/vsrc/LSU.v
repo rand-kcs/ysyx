@@ -204,6 +204,7 @@ end
 
 
 reg [31:0] wdata_exu_buf;
+reg [3:0] wstrb_exu_buf;
 
 // 握手成功时的信息传递
 always@(posedge clk) begin
@@ -225,12 +226,14 @@ always@(posedge clk) begin
     is_ecall_buf <= is_ecall;
     is_mret_buf <= is_mret;
     wdata_exu_buf <= wdata_exu;
+    wstrb_exu_buf <= wmask[3:0];
   end
 end
 
 assign araddr = alu_out_buf;
 assign awaddr = alu_out_buf;
 assign wdata = wdata_exu_buf;
+assign wstrb = wstrb_exu_buf;
 
 
 // rdata_w stands for treated after origin rdata from DRAM

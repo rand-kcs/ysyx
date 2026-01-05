@@ -132,7 +132,7 @@ always @(negedge clk) begin
   if(arvalid && arready)
     arbuf <= araddr;
   if(rvalid)
-    rdata <= pmem_read(araddr);
+    rdata <= pmem_read(arbuf);
 
   if(awvalid && awready)
     awbuf <= awaddr;
@@ -140,7 +140,7 @@ always @(negedge clk) begin
     wbuf <= wdata;
     wstrbuf <= wstrb;
   end
-  if(bready)
+  if(bready&&bvalid)
     pmem_write(awbuf, wbuf, {4'b0,wstrbuf});
 end
 
