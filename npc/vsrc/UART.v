@@ -104,7 +104,7 @@ always @(negedge clk) begin
   end
   if(bready&&bvalid) begin
     difftest_skip_ref();
-    $write("Serial Output: %c\n", wbuf[7:0]);
+    $write("%c", wbuf[7:0]);
     end
 end
 
