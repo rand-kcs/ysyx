@@ -279,29 +279,6 @@ wire [31:0] alu_out_lsu;
 wire is_ecall_lsu;
 wire is_mret_lsu;
 
-//    // ========== 声明共享的AXI4-Lite信号 ==========
-//    // 这些信号将连接LSU（主设备）和DRAM2（从设备）
-//    wire [31:0] araddr;    // 读地址
-//    wire        arvalid;   // 读地址有效
-//    wire        arready;   // 读地址就绪
-//    
-//    wire [31:0] rdata;     // 读数据
-//    wire [1:0]  rresp;     // 读响应
-//    wire        rvalid;    // 读数据有效
-//    wire        rready;    // 读数据就绪
-//    
-//    wire [31:0] awaddr;    // 写地址
-//    wire        awvalid;   // 写地址有效
-//    wire        awready;   // 写地址就绪
-//    
-//    wire [31:0] wdata;     // 写数据
-//    wire [3:0]  wstrb;     // 写字节使能
-//    wire        wvalid;    // 写数据有效
-//    wire        wready;    // 写数据就绪
-//    
-//    wire [1:0]  bresp;     // 写响应
-//    wire        bvalid;    // 写响应有效
-//    wire        bready;    // 写响应就绪
 
 // LSU到ARBITER的连接信号
 wire [31:0] lsu_araddr;
@@ -322,57 +299,6 @@ wire [1:0] lsu_bresp;
 wire lsu_bvalid;
 wire lsu_bready;
 
-// ARBITER到DRAM2的连接信号
-wire [31:0] arbiter_s_araddr;
-wire arbiter_s_arvalid;
-wire arbiter_s_arready;
-wire [31:0] arbiter_s_rdata;
-wire [1:0] arbiter_s_rresp;
-wire arbiter_s_rvalid;
-wire arbiter_s_rready;
-wire [31:0] arbiter_s_awaddr;
-wire arbiter_s_awvalid;
-wire arbiter_s_awready;
-wire [31:0] arbiter_s_wdata;
-wire [3:0] arbiter_s_wstrb;
-wire arbiter_s_wvalid;
-wire arbiter_s_wready;
-wire [1:0] arbiter_s_bresp;
-wire arbiter_s_bvalid;
-wire arbiter_s_bready;
-
-// ========== DRAM2实例化 ==========
-DRAM2 dram2(
-  .clk(clk), 
-  .rst(rst), 
-  
-  // read address path -->
-  .araddr(arbiter_s_araddr),
-  .arvalid(arbiter_s_arvalid),
-  .arready(arbiter_s_arready),
-  
-  // read data path <--
-  .rdata(arbiter_s_rdata),
-  .rresp(arbiter_s_rresp),
-  .rvalid(arbiter_s_rvalid),
-  .rready(arbiter_s_rready),
-  
-  // write address path -->
-  .awaddr(arbiter_s_awaddr),
-  .awvalid(arbiter_s_awvalid),
-  .awready(arbiter_s_awready),
-  
-  // write data path -->
-  .wdata(arbiter_s_wdata),
-  .wstrb(arbiter_s_wstrb),
-  .wvalid(arbiter_s_wvalid),
-  .wready(arbiter_s_wready),
-  
-  // write response path <--
-  .bresp(arbiter_s_bresp),
-  .bvalid(arbiter_s_bvalid),
-  .bready(arbiter_s_bready)
-);
 
 // ========== LSU实例化 ==========
 LSU lsu(
@@ -448,6 +374,82 @@ LSU lsu(
   .bresp_out()
 );
 
+// ARBITER到XBAR的信号
+wire [31:0] arb_to_xbar_araddr;
+wire arb_to_xbar_arvalid;
+wire arb_to_xbar_arready;
+wire [31:0] arb_to_xbar_rdata;
+wire [1:0] arb_to_xbar_rresp;
+wire arb_to_xbar_rvalid;
+wire arb_to_xbar_rready;
+wire [31:0] arb_to_xbar_awaddr;
+wire arb_to_xbar_awvalid;
+wire arb_to_xbar_awready;
+wire [31:0] arb_to_xbar_wdata;
+wire [3:0] arb_to_xbar_wstrb;
+wire arb_to_xbar_wvalid;
+wire arb_to_xbar_wready;
+wire [1:0] arb_to_xbar_bresp;
+wire arb_to_xbar_bvalid;
+wire arb_to_xbar_bready;
+
+// XBAR到DRAM2的信号
+wire [31:0] xbar_to_dram_araddr;
+wire xbar_to_dram_arvalid;
+wire xbar_to_dram_arready;
+wire [31:0] xbar_to_dram_rdata;
+wire [1:0] xbar_to_dram_rresp;
+wire xbar_to_dram_rvalid;
+wire xbar_to_dram_rready;
+wire [31:0] xbar_to_dram_awaddr;
+wire xbar_to_dram_awvalid;
+wire xbar_to_dram_awready;
+wire [31:0] xbar_to_dram_wdata;
+wire [3:0] xbar_to_dram_wstrb;
+wire xbar_to_dram_wvalid;
+wire xbar_to_dram_wready;
+wire [1:0] xbar_to_dram_bresp;
+wire xbar_to_dram_bvalid;
+wire xbar_to_dram_bready;
+
+// XBAR到UART的信号
+wire [31:0] xbar_to_uart_araddr;
+wire xbar_to_uart_arvalid;
+wire xbar_to_uart_arready;
+wire [31:0] xbar_to_uart_rdata;
+wire [1:0] xbar_to_uart_rresp;
+wire xbar_to_uart_rvalid;
+wire xbar_to_uart_rready;
+wire [31:0] xbar_to_uart_awaddr;
+wire xbar_to_uart_awvalid;
+wire xbar_to_uart_awready;
+wire [31:0] xbar_to_uart_wdata;
+wire [3:0] xbar_to_uart_wstrb;
+wire xbar_to_uart_wvalid;
+wire xbar_to_uart_wready;
+wire [1:0] xbar_to_uart_bresp;
+wire xbar_to_uart_bvalid;
+wire xbar_to_uart_bready;
+
+// XBAR到CLINT的信号
+wire [31:0] xbar_to_clint_araddr;
+wire xbar_to_clint_arvalid;
+wire xbar_to_clint_arready;
+wire [31:0] xbar_to_clint_rdata;
+wire [1:0] xbar_to_clint_rresp;
+wire xbar_to_clint_rvalid;
+wire xbar_to_clint_rready;
+wire [31:0] xbar_to_clint_awaddr;
+wire xbar_to_clint_awvalid;
+wire xbar_to_clint_awready;
+wire [31:0] xbar_to_clint_wdata;
+wire [3:0] xbar_to_clint_wstrb;
+wire xbar_to_clint_wvalid;
+wire xbar_to_clint_wready;
+wire [1:0] xbar_to_clint_bresp;
+wire xbar_to_clint_bvalid;
+wire xbar_to_clint_bready;
+
 // ========== ARBITER实例化 ==========
 ARBITER arbiter(
   .clk(clk),
@@ -465,20 +467,20 @@ ARBITER arbiter(
   .m0_rvalid(ifu_rvalid),
   .m0_rready(ifu_rready),
   
-  // 写地址通道 - IFU没有写操作，接地
+  // 写地址通道 - IFU没有写操作
   .m0_awaddr(32'b0),
   .m0_awvalid(1'b0),
-  .m0_awready(),  // 悬空，不连接
+  .m0_awready(),  // 悬空
   
-  // 写数据通道 - IFU没有写操作，接地
+  // 写数据通道 - IFU没有写操作
   .m0_wdata(32'b0),
   .m0_wstrb(4'b0),
   .m0_wvalid(1'b0),
-  .m0_wready(),   // 悬空，不连接
+  .m0_wready(),   // 悬空
   
-  // 写响应通道 - IFU没有写操作，接地
-  .m0_bresp(),    // 悬空，不连接
-  .m0_bvalid(),   // 悬空，不连接
+  // 写响应通道 - IFU没有写操作
+  .m0_bresp(),    // 悬空
+  .m0_bvalid(),   // 悬空
   .m0_bready(1'b0),
   
   // 主设备1接口 (Master 1) - 分配给LSU
@@ -509,34 +511,245 @@ ARBITER arbiter(
   .m1_bvalid(lsu_bvalid),
   .m1_bready(lsu_bready),
   
-  // 从设备接口 (Slave) - 连接到DRAM2
+  // 从设备接口 (Slave) - 连接到XBAR
   // 读地址通道
-  .s_araddr(arbiter_s_araddr),
-  .s_arvalid(arbiter_s_arvalid),
-  .s_arready(arbiter_s_arready),
+  .s_araddr(arb_to_xbar_araddr),
+  .s_arvalid(arb_to_xbar_arvalid),
+  .s_arready(arb_to_xbar_arready),
   
   // 读数据通道
-  .s_rdata(arbiter_s_rdata),
-  .s_rresp(arbiter_s_rresp),
-  .s_rvalid(arbiter_s_rvalid),
-  .s_rready(arbiter_s_rready),
+  .s_rdata(arb_to_xbar_rdata),
+  .s_rresp(arb_to_xbar_rresp),
+  .s_rvalid(arb_to_xbar_rvalid),
+  .s_rready(arb_to_xbar_rready),
   
   // 写地址通道
-  .s_awaddr(arbiter_s_awaddr),
-  .s_awvalid(arbiter_s_awvalid),
-  .s_awready(arbiter_s_awready),
+  .s_awaddr(arb_to_xbar_awaddr),
+  .s_awvalid(arb_to_xbar_awvalid),
+  .s_awready(arb_to_xbar_awready),
   
   // 写数据通道
-  .s_wdata(arbiter_s_wdata),
-  .s_wstrb(arbiter_s_wstrb),
-  .s_wvalid(arbiter_s_wvalid),
-  .s_wready(arbiter_s_wready),
+  .s_wdata(arb_to_xbar_wdata),
+  .s_wstrb(arb_to_xbar_wstrb),
+  .s_wvalid(arb_to_xbar_wvalid),
+  .s_wready(arb_to_xbar_wready),
   
   // 写响应通道
-  .s_bresp(arbiter_s_bresp),
-  .s_bvalid(arbiter_s_bvalid),
-  .s_bready(arbiter_s_bready)
+  .s_bresp(arb_to_xbar_bresp),
+  .s_bvalid(arb_to_xbar_bvalid),
+  .s_bready(arb_to_xbar_bready)
 );
+
+// ========== XBAR实例化 ==========
+XBAR xbar(
+  .clk(clk),
+  .rst(rst),
+  
+  // ========== 主设备接口（来自ARBITER）==========
+  // 读地址通道
+  .arb_araddr(arb_to_xbar_araddr),
+  .arb_arvalid(arb_to_xbar_arvalid),
+  .arb_arready(arb_to_xbar_arready),
+  
+  // 读数据通道
+  .arb_rdata(arb_to_xbar_rdata),
+  .arb_rresp(arb_to_xbar_rresp),
+  .arb_rvalid(arb_to_xbar_rvalid),
+  .arb_rready(arb_to_xbar_rready),
+  
+  // 写地址通道
+  .arb_awaddr(arb_to_xbar_awaddr),
+  .arb_awvalid(arb_to_xbar_awvalid),
+  .arb_awready(arb_to_xbar_awready),
+  
+  // 写数据通道
+  .arb_wdata(arb_to_xbar_wdata),
+  .arb_wstrb(arb_to_xbar_wstrb),
+  .arb_wvalid(arb_to_xbar_wvalid),
+  .arb_wready(arb_to_xbar_wready),
+  
+  // 写响应通道
+  .arb_bresp(arb_to_xbar_bresp),
+  .arb_bvalid(arb_to_xbar_bvalid),
+  .arb_bready(arb_to_xbar_bready),
+  
+  // ========== 从设备接口1：DRAM ==========
+  // 读地址通道
+  .dram_araddr(xbar_to_dram_araddr),
+  .dram_arvalid(xbar_to_dram_arvalid),
+  .dram_arready(xbar_to_dram_arready),
+  
+  // 读数据通道
+  .dram_rdata(xbar_to_dram_rdata),
+  .dram_rresp(xbar_to_dram_rresp),
+  .dram_rvalid(xbar_to_dram_rvalid),
+  .dram_rready(xbar_to_dram_rready),
+  
+  // 写地址通道
+  .dram_awaddr(xbar_to_dram_awaddr),
+  .dram_awvalid(xbar_to_dram_awvalid),
+  .dram_awready(xbar_to_dram_awready),
+  
+  // 写数据通道
+  .dram_wdata(xbar_to_dram_wdata),
+  .dram_wstrb(xbar_to_dram_wstrb),
+  .dram_wvalid(xbar_to_dram_wvalid),
+  .dram_wready(xbar_to_dram_wready),
+  
+  // 写响应通道
+  .dram_bresp(xbar_to_dram_bresp),
+  .dram_bvalid(xbar_to_dram_bvalid),
+  .dram_bready(xbar_to_dram_bready),
+  
+  // ========== 从设备接口2：UART ==========
+  // 读地址通道
+  .uart_araddr(xbar_to_uart_araddr),
+  .uart_arvalid(xbar_to_uart_arvalid),
+  .uart_arready(xbar_to_uart_arready),
+  
+  // 读数据通道
+  .uart_rdata(xbar_to_uart_rdata),
+  .uart_rresp(xbar_to_uart_rresp),
+  .uart_rvalid(xbar_to_uart_rvalid),
+  .uart_rready(xbar_to_uart_rready),
+  
+  // 写地址通道
+  .uart_awaddr(xbar_to_uart_awaddr),
+  .uart_awvalid(xbar_to_uart_awvalid),
+  .uart_awready(xbar_to_uart_awready),
+  
+  // 写数据通道
+  .uart_wdata(xbar_to_uart_wdata),
+  .uart_wstrb(xbar_to_uart_wstrb),
+  .uart_wvalid(xbar_to_uart_wvalid),
+  .uart_wready(xbar_to_uart_wready),
+  
+  // 写响应通道
+  .uart_bresp(xbar_to_uart_bresp),
+  .uart_bvalid(xbar_to_uart_bvalid),
+  .uart_bready(xbar_to_uart_bready),
+  
+  // ========== 从设备接口3：CLINT ==========
+  // 读地址通道
+  .clint_araddr(xbar_to_clint_araddr),
+  .clint_arvalid(xbar_to_clint_arvalid),
+  .clint_arready(xbar_to_clint_arready),
+  
+  // 读数据通道
+  .clint_rdata(xbar_to_clint_rdata),
+  .clint_rresp(xbar_to_clint_rresp),
+  .clint_rvalid(xbar_to_clint_rvalid),
+  .clint_rready(xbar_to_clint_rready),
+  
+  // 写地址通道
+  .clint_awaddr(xbar_to_clint_awaddr),
+  .clint_awvalid(xbar_to_clint_awvalid),
+  .clint_awready(xbar_to_clint_awready),
+  
+  // 写数据通道
+  .clint_wdata(xbar_to_clint_wdata),
+  .clint_wstrb(xbar_to_clint_wstrb),
+  .clint_wvalid(xbar_to_clint_wvalid),
+  .clint_wready(xbar_to_clint_wready),
+  
+  // 写响应通道
+  .clint_bresp(xbar_to_clint_bresp),
+  .clint_bvalid(xbar_to_clint_bvalid),
+  .clint_bready(xbar_to_clint_bready)
+);
+
+// ========== DRAM2实例化 ==========
+DRAM2 dram2(
+  .clk(clk), 
+  .rst(rst), 
+  
+  // read address path -->
+  .araddr(xbar_to_dram_araddr),
+  .arvalid(xbar_to_dram_arvalid),
+  .arready(xbar_to_dram_arready),
+  
+  // read data path <--
+  .rdata(xbar_to_dram_rdata),
+  .rresp(xbar_to_dram_rresp),
+  .rvalid(xbar_to_dram_rvalid),
+  .rready(xbar_to_dram_rready),
+  
+  // write address path -->
+  .awaddr(xbar_to_dram_awaddr),
+  .awvalid(xbar_to_dram_awvalid),
+  .awready(xbar_to_dram_awready),
+  
+  // write data path -->
+  .wdata(xbar_to_dram_wdata),
+  .wstrb(xbar_to_dram_wstrb),
+  .wvalid(xbar_to_dram_wvalid),
+  .wready(xbar_to_dram_wready),
+  
+  // write response path <--
+  .bresp(xbar_to_dram_bresp),
+  .bvalid(xbar_to_dram_bvalid),
+  .bready(xbar_to_dram_bready)
+);
+
+// ========== UART实例化 ==========
+UART uart(
+  .clk(clk),
+  .rst(rst),
+  
+  // AXI接口
+  .araddr(xbar_to_uart_araddr),
+  .arvalid(xbar_to_uart_arvalid),
+  .arready(xbar_to_uart_arready),
+  
+  .rdata(xbar_to_uart_rdata),
+  .rresp(xbar_to_uart_rresp),
+  .rvalid(xbar_to_uart_rvalid),
+  .rready(xbar_to_uart_rready),
+  
+  .awaddr(xbar_to_uart_awaddr),
+  .awvalid(xbar_to_uart_awvalid),
+  .awready(xbar_to_uart_awready),
+  
+  .wdata(xbar_to_uart_wdata),
+  .wstrb(xbar_to_uart_wstrb),
+  .wvalid(xbar_to_uart_wvalid),
+  .wready(xbar_to_uart_wready),
+  
+  .bresp(xbar_to_uart_bresp),
+  .bvalid(xbar_to_uart_bvalid),
+  .bready(xbar_to_uart_bready)
+  
+);
+
+// ========== CLINT实例化 ==========
+CLINT clint(
+  .clk(clk),
+  .rst(rst),
+  
+  // AXI接口
+  .araddr(xbar_to_clint_araddr),
+  .arvalid(xbar_to_clint_arvalid),
+  .arready(xbar_to_clint_arready),
+  
+  .rdata(xbar_to_clint_rdata),
+  .rresp(xbar_to_clint_rresp),
+  .rvalid(xbar_to_clint_rvalid),
+  .rready(xbar_to_clint_rready),
+  
+  .awaddr(xbar_to_clint_awaddr),
+  .awvalid(xbar_to_clint_awvalid),
+  .awready(xbar_to_clint_awready),
+  
+  .wdata(xbar_to_clint_wdata),
+  .wstrb(xbar_to_clint_wstrb),
+  .wvalid(xbar_to_clint_wvalid),
+  .wready(xbar_to_clint_wready),
+  
+  .bresp(xbar_to_clint_bresp),
+  .bvalid(xbar_to_clint_bvalid),
+  .bready(xbar_to_clint_bready)
+);
+
 
 WBU wbu(
   .valid_in_lsu(valid_lsu_wbu), 
