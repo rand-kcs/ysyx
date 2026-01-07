@@ -15,6 +15,10 @@ uint32_t img [] = {
 	// 0x0000a1b7, // lui x3, 10
 	//  0x0000b113, // sltiu x2, x1, 0
 	// 0x00001217, // auipc x4, 1<<12
+  0xa00002b7,  // lui t0, 0xa0000        # 加载高20位到t0
+  0x3f828293,  // addi t0, t0, 0x3f8     # 加上低12位偏移
+  0x04800313,  //li t1, 0x48            # 加载字符'H'
+  0x00628023,  //sb t1, 0(t0)           # 存储到UART
 	0x004002ef, // jal x5, 4
   0x00c28293, //addi x5, x5, 12
   0x30529073, //csrrw x0, mtvec, x5
@@ -25,7 +29,6 @@ uint32_t img [] = {
   0x34129073, // csrrw x0, mepc, x5
   0x30200073, // mret
 	0x00428367, // jalr x6, 4(x5)
-	0x00100073, // ebreak;
 	0x00100093, // addi r1, r0, 1
   0x0002a383, //  lw x7, 0(x5)
   0x00029383, // lh x7, 0(x5)
@@ -44,6 +47,7 @@ uint32_t img [] = {
   0x04300093, //addi x1, x0, 67
 	0x34209073, // csrw mcaus, r1
 	0x34202173, // csrr r2,mcause
+	0x00100073, // ebreak;
 	0x000000,
 };
 
@@ -110,7 +114,7 @@ extern "C" void pmem_write(int waddr, int wdata, char wmask) {
   // 如`wmask = 0x3`代表只写入最低2个字节, 内存中的其它字节保持不变
   //
   char holder[256];
-  sprintf(holder,"[npc]: Writing addr 0x%08x\n", waddr);
+  sprintf(holder,"[npc]: Writing addr 0x%08x, with data: 0x%08x, with wmask: 0x%04x\n", waddr, wdata, wmask);
   RF_Write(&mring_buf, holder);
 
   if(waddr == SERIAL_PORT){

@@ -28,6 +28,8 @@ uint8_t* guest_to_host(paddr_t paddr) ;
 //paddr_t host_to_guest(uint8_t *haddr) { return haddr     - pmem + CONFIG_MBASE; }
 
 extern "C" int pmem_read(int addr);
+
+extern "C" void difftest_skip_ref();
  
 extern "C" void pmem_write(int waddr, int wdata, char wmask);
 
