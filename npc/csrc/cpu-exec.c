@@ -52,9 +52,9 @@ static void exec_once() {
 
   trace();
 	single_cycle();
-  while(!tb->done){
-	  single_cycle();
-  }
+   while(!tb->done){
+    single_cycle();
+   }
   //printf("One inst execute state: %x\n", tb->done);
   //printf("Test ALU_imm_input: 0x%08x\n", tb->top->eu->imm);
   //print_reg_status();
@@ -68,7 +68,7 @@ static void exec_once() {
 
   #ifdef DIFFTEST
   /* difftest */
-    difftest_step(tb->pc, tb->pc);
+      difftest_step(tb->pc, tb->pc);
   #endif
 
 
