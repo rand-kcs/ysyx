@@ -53,6 +53,7 @@ void init_difftest(char *ref_so_file, long img_size, int port) {
 }
 
 bool isa_difftest_checkregs(CPU_state *ref) {
+  #ifdef NPC_DEBUG
   for(int i = 0; i < RISCV_GPR_NUM; i++){
     if(ref->gpr[i] != tb->rf_dbg[i]) {
        Log("Reg dont Match! id: %d\ntb: 0x%08x\nref: 0x%08x", i, tb->rf_dbg[i], ref->gpr[i]) ;
@@ -65,6 +66,7 @@ bool isa_difftest_checkregs(CPU_state *ref) {
   }
 
   //Log("Diff Check Pass\n");
+ #endif
   return true;
 }
 
@@ -77,10 +79,12 @@ static void checkregs(CPU_state *ref, vaddr_t pc) {
 }
 
 void set_cpu(){
+  #ifdef NPC_DEBUG
   for(int i = 0; i < RISCV_GPR_NUM; i++){
     cpu.gpr[i] = tb->rf_dbg[i];
   }
   cpu.pc = tb->pc;
+  #endif
 }
 
 void difftest_step(vaddr_t pc, vaddr_t npc) {

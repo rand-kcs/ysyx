@@ -1,2 +1,2 @@
-#define ITRACE 1
-#define DIFFTEST 1
+//#define ITRACE 0  
+//#define DIFFTEST 0

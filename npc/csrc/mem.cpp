@@ -53,6 +53,8 @@ uint32_t img [] = {
 
 uint8_t pmem[CONFIG_MSIZE] = {};
 
+uint8_t mrom[CONFIG_MROM_SIZE] = {};
+
 void load_default_img(){
   memcpy(guest_to_host(RESET_VECTOR), img, sizeof(img));
 }
@@ -60,6 +62,19 @@ void load_default_img(){
 // pmem as pointer type, add 1 equals to add 4 in real place.
 uint8_t* guest_to_host(paddr_t paddr) { return (uint8_t*)pmem +  (paddr - CONFIG_MBASE)  ; }
 //paddr_t host_to_guest(uint8_t *haddr) { return haddr     - pmem + CONFIG_MBASE; }
+
+
+uint8_t* guest_to_host_mrom(paddr_t paddr) { return (uint8_t*)mrom +  (paddr - CONFIG_MROM_BASE)  ; }
+
+extern "C" void mrom_read(int32_t addr, int32_t *data) {
+  Log("READING MROM AT 0x%08x \n", addr);
+  char holder[256];
+  sprintf(holder,"[npc]: Reading addr 0x%08x\n", addr);
+  RF_Write(&mring_buf, holder);
+
+    *data = *(uint32_t*)guest_to_host_mrom(addr);
+}
+
 
 static inline bool in_pmem(paddr_t addr) {
   return addr - CONFIG_MBASE < CONFIG_MSIZE;

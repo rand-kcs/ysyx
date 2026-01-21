@@ -7,7 +7,7 @@ module PC_reg (
   output reg done
 );
 
-Reg #(32, 32'h80000000) reg_init(clk, rst, dnpc, pc, valid_wbu);
+Reg #(32, 32'h20000000) reg_init(clk, rst, dnpc, pc, valid_wbu);
 
 always@(posedge clk) begin
   if(rst)

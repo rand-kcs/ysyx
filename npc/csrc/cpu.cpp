@@ -3,12 +3,13 @@
 #include "utils.h"
 #include "macro.h"
 #include "svdpi.h"
-#include "Vtop__Dpi.h"
 
 void print_reg_status() {
+  #ifdef NPC_DEBUG
   for(int i = 0; i < 32; i++){
     printf("r%d : 0x%08x\n", i, tb->rf_dbg[i]);
   }
+  #endif
 }
 
 
@@ -21,6 +22,7 @@ const char *regs[] = {
 
 
 word_t isa_reg_str2val(const char *s, bool *success) {
+  #ifdef NPC_DEBUG
 	for(int i = 0; i < ARRLEN(regs); i++){
 		if(strcmp(regs[i], s) == 0)	
 			return tb->rf_dbg[i];
@@ -31,15 +33,16 @@ word_t isa_reg_str2val(const char *s, bool *success) {
 	}
 	
 	*success = false;
+  #endif
 	return 0;
 }
 
 
 
 void single_cycle() {                      
-   tb->clk = 0; tb->eval();
+   tb->clock = 0; tb->eval();
    contextp->timeInc(1);
-   tb->clk = 1; tb->eval();
+   tb->clock= 1; tb->eval();
    contextp->timeInc(1);
  }
 

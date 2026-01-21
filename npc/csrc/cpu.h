@@ -1,8 +1,8 @@
 #include <verilated.h>
-#include "Vtop.h"
+#include "VDUT.h"
 #include "macro.h"
 
-extern Vtop* tb;
+extern VDUT* tb;
 extern VerilatedContext* contextp;
 
 void cpu_exec(uint64_t);

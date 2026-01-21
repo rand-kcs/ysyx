@@ -4,26 +4,30 @@
 #include <verilated.h>
 #include <cstdint>
 #include <cstddef>
-#include "Vtop.h"
+#include "VDUT.h"
 #include "mem.h"
 #include "utils.h"
 #include "svdpi.h"
-#include "Vtop__Dpi.h"
+#include "VDUT__Dpi.h"
 #include "cpu.h"
 
-Vtop* tb;
+VDUT* tb;
 VerilatedContext* contextp;
 void init_monitor(int, char**);
 void sdb_main_loop();
 int is_exit_status_bad() ;
 
 static void reset(int n) {
-  tb->rst = 1;
+  tb->reset = 1;
   while (n -- > 0) single_cycle();
-  tb->rst = 0;
+  tb->reset = 0;
 }
  
-
+extern "C" void flash_read(int32_t addr, int32_t *data) { assert(0); }
+// extern "C" void mrom_read(int32_t addr, int32_t *data) { 
+//   printf("Calling MROM READ AT 0x%08x\n", addr);
+//   *data = 0x00100073;
+// }
 
 int main(int argc, char** argv){
 	//Verilated::mkdir("logs");
@@ -38,9 +42,11 @@ int main(int argc, char** argv){
 	contextp->commandArgs(argc, argv);
 
 	//Construct the Verilated Model, From Vtop.h 
-	tb = new Vtop{contextp};
+	tb = new VDUT{contextp};
 
-	const svScope scope = svGetScopeFromName("TOP.top");
+	const svScope scope = svGetScopeFromName("TOP.ysyxSoCFull.asic.cpu.cpu");
+  // 在 Verilated 初始化之后，Scope 获取之前
+  Verilated::scopesDump(); // 这会将所有 scope 打印到标准输出
 	assert(scope);  // Check for nullptr if scope not found
 	svSetScope(scope);
 

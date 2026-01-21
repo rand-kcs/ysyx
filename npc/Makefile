@@ -1,4 +1,4 @@
-TOPNAME=top
+TOPNAME=ysyxSoCFull
 BUILD_DIR=./build
 OBJ_DIR=$(BUILD_DIR)/obj_dir
 NXDC_FILES= constr/top.nxdc
@@ -19,7 +19,6 @@ $(SRC_AUTO_BIND): $(NXDC_FILES)
 include $(NVBOARD_HOME)/scripts/nvboard.mk
 
 # rules for verilator
-INCFLAGS = $(addprefix -I, $(INC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""
 
 VSRCS = ./vsrc/top.v ./vsrc/switch.v
@@ -36,7 +35,10 @@ $(BIN): $(VSRCS) $(CSRCS) $(NVBOARD_ARCHIVE)
 		--Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN))
 	
 	
-VSRC=$(shell find -name "*.v" | grep -v "$(TOPNAME).v")
+VSRC=$(shell find -name "*.v")
+SOCVSRC=$(shell find $(YSYX_HOME)/ysyxSoC/perip -name "*.v")
+VSRC+=$(SOCVSRC)
+
 CXXSRC=$(shell find ./csrc -name "*.cpp")
 CXXSRC+=$(shell find ./csrc -name "*.c")
 LDFLAGS= -lreadline 
@@ -64,21 +66,31 @@ ifeq ($(WAVETRACE), 1)
 	TRACEFLAG= --trace-fst
 endif
 
+SOC_HOME= $(YSYX_HOME)/ysyxSoC
+
+INC_PATH = $(YSYX_HOME)/ysyxSoC/perip/uart16550/rtl $(YSYX_HOME)/ysyxSoC/perip/spi/rtl
+INCFLAGS = $(addprefix -I, $(INC_PATH))
+
+
 # 默认值：显示所有警告（不抑制）
 SUPPRESS_PIN_WARN ?= 0
-VERILATOR_FLAGS = -Wall
+VERILATOR_FLAGS += -Wall --timescale "1ns/1ns" --no-timing 
 
 # 根据 SUPPRESS_PIN_WARN 变量的值添加选项
 ifeq ($(SUPPRESS_PIN_WARN),1)
-    VERILATOR_FLAGS += -Wno-PINCONNECTEMPTY -Wno-PINMISSING -Wno-CASEINCOMPLETE
+    VERILATOR_FLAGS += -Wno-PINCONNECTEMPTY -Wno-PINMISSING -Wno-CASEINCOMPLETE -Wno-DECLFILENAME -Wno-ASSIGNDLY  -Wno-DEFPARAM -Wno-UNUSEDPARAM -Wno-SYNCASYNCNET  
     $(info # PINCONNECTEMPTY warnings are SUPPRESSED)
 else
     $(info # PINCONNECTEMPTY warnings are ENABLED)
 endif
 
+TOP_PATH= $(SOC_HOME)/build
+
+MROM ?= ../mykernel/build/char-test.bin
+
 run:
-	$(VERILATOR) --public --cc --exe --build -j 0 $(VERILATOR_FLAGS) -timing  $(TRACEFLAG) $(NEW_LDFLAGS) $(NEW_CXXFLAGS)  $(CXXSRC)  vsrc/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
-	./build/Vtop  --log=$(BUILD_DIR)/npc-log.txt --diff=ref/riscv32-nemu-interpreter-so $(ARGS) $(IMG) 
+	$(VERILATOR) --public --cc --exe --build --prefix VDUT -j 0 $(VERILATOR_FLAGS) $(TRACEFLAG) $(NEW_LDFLAGS) $(INCFLAGS) $(NEW_CXXFLAGS)  $(CXXSRC)  $(TOP_PATH)/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
+	./build/VDUT  --log=$(BUILD_DIR)/npc-log.txt --diff=ref/riscv32-nemu-interpreter-so --mrom=$(MROM) $(ARGS) $(IMG) 
  
 clean:
 	rm -r build/

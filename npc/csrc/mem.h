@@ -1,6 +1,8 @@
 #include <cstdint>
 #define CONFIG_MBASE 0x80000000
+#define CONFIG_MROM_BASE 0x20000000
 #define CONFIG_MSIZE 0x8000000
+#define CONFIG_MROM_SIZE 0x1000
 #define RESET_VECTOR CONFIG_MBASE
 
 #define MMIO_BASE 0xa0000000
@@ -26,6 +28,8 @@ void load_default_img();
 // pmem as pointer type, add 1 equals to add 4 in real place.
 uint8_t* guest_to_host(paddr_t paddr) ;
 //paddr_t host_to_guest(uint8_t *haddr) { return haddr     - pmem + CONFIG_MBASE; }
+
+uint8_t* guest_to_host_mrom(paddr_t paddr) ;
 
 extern "C" int pmem_read(int addr);
 

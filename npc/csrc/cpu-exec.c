@@ -1,11 +1,11 @@
-#include "Vtop___024root.h"
 #include "utils.h"
 #include "mem.h"
 #include "cpu.h"
 #include "macro.h"
 #include "svdpi.h"
 #include "difftest.h"
-#include "Vtop__Dpi.h"
+#include "VDUT.h"
+#include "VDUT__Dpi.h"
 #include <cstdio>
 #define MAX_INST_TO_PRINT 10
 
@@ -52,9 +52,9 @@ static void exec_once() {
 
   trace();
 	single_cycle();
-   while(!tb->done){
-    single_cycle();
-   }
+   // while(!tb->done){
+   //  single_cycle();
+   // }
   //printf("One inst execute state: %x\n", tb->done);
   //printf("Test ALU_imm_input: 0x%08x\n", tb->top->eu->imm);
   //print_reg_status();
@@ -68,16 +68,15 @@ static void exec_once() {
 
   #ifdef DIFFTEST
   /* difftest */
-      difftest_step(tb->pc, tb->pc);
+      //difftest_step(tb->pc, tb->pc);
   #endif
 
-
 	if(ebreakYes()){
-    tb->clk = 0;          // 手动置低
+    tb->clock = 0;          // 手动置低
     tb->eval();            // 更新信号状态
     contextp->timeInc(1);  // 时间增加 1 单位
 		npc_state.state = NPC_END;
-		npc_state.halt_pc = tb->pc;
+		//npc_state.halt_pc = tb->pc;
   }
 }
 
