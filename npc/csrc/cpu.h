@@ -15,5 +15,11 @@ struct CPU_state{
 	uint32_t pc;
 };
 
+uint32_t cpu_gpr(int i);
+
+uint32_t cpu_pc();
+
+uint32_t cpu_done();
+
 
 extern CPU_state cpu ;

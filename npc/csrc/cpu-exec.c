@@ -48,18 +48,13 @@ static void trace() {
 }
 
 static void exec_once() {
-  //tb->inst = pmem_read(tb->pc);
-
   trace();
 	single_cycle();
-   // while(!tb->done){
-   //  single_cycle();
-   // }
+    while(!cpu_done()){
+     single_cycle();
+    }
   //printf("One inst execute state: %x\n", tb->done);
-  //printf("Test ALU_imm_input: 0x%08x\n", tb->top->eu->imm);
-  //print_reg_status();
-  //printf("Test IDU_Wen: 0x%08x\n", tb->top->idu->wen);
-
+  print_reg_status();
 
   // WatchPoint Trigger
 	if(WP_trigger()){

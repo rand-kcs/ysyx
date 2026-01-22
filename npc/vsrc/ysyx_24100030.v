@@ -141,9 +141,9 @@ function ebreakYes;
     ebreakYes = !|((inst_ifu_idu & 32'hfff0707f) ^ 32'h00100073);
 endfunction
 
-    reg [31:0]       pc;
-    reg              done;
-    reg [31:0]       rf_dbg [31:0];
+    reg [31:0]       pc  /*verilator public*/;
+   reg              done/*verilator public*/;
+     reg [31:0]       rf_dbg [31:0]  /*verilator public*/;
 
 wire [31:0] dnpc;
 wire [4:0] rd_wbu;

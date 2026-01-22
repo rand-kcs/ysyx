@@ -55,13 +55,13 @@ void init_difftest(char *ref_so_file, long img_size, int port) {
 bool isa_difftest_checkregs(CPU_state *ref) {
   #ifdef NPC_DEBUG
   for(int i = 0; i < RISCV_GPR_NUM; i++){
-    if(ref->gpr[i] != tb->rf_dbg[i]) {
-       Log("Reg dont Match! id: %d\ntb: 0x%08x\nref: 0x%08x", i, tb->rf_dbg[i], ref->gpr[i]) ;
+    if(ref->gpr[i] != cpu_gpr(i)) {
+       Log("Reg dont Match! id: %d\ntb: 0x%08x\nref: 0x%08x", i, cpu_gpr(i), ref->gpr[i]) ;
       return false;
     }
   }
-  if(ref->pc != tb->pc){
-    Log("PC dont Match :\ntb: 0x%08x\nref: 0x%08x \n", tb->pc, ref->pc) ;
+  if(ref->pc != cpu_pc()){
+    Log("PC dont Match :\ntb: 0x%08x\nref: 0x%08x \n", cpu_pc(), ref->pc) ;
     return false;
   }
 
