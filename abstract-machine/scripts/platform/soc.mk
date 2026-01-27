@@ -17,14 +17,24 @@ CFLAGS += -DMAINARGS=\"$(mainargs)\"
 CFLAGS += -I$(AM_HOME)/am/src/riscv/npc/include
 
 
-NPCFLAGS += -l $(shell dirname $(IMAGE).elf)/soc-log.txt 
+ifeq ($(BATCH),1)
+   # LDFLAGS += --gc-sections
+   # CFLAGS  += -ffunction-sections -fdata-sections
+	  SOCFLAGS+= -b
+endif
+
+
+
+
 
 .PHONY: $(AM_HOME)/am/src/riscv/npc/trm.c
 
+# 不将.bss 段的内容加载 进.bin 中
+#--set-section-flags .bss=alloc,contents
 image: $(IMAGE).elf
 	@$(OBJDUMP) -d $(IMAGE).elf > $(IMAGE).txt
 	@echo + OBJCOPY "->" $(IMAGE_REL).bin
-	@$(OBJCOPY) -S --set-section-flags .bss=alloc,contents -O binary $(IMAGE).elf $(IMAGE).bin
+	@$(OBJCOPY) -S  -O binary $(IMAGE).elf $(IMAGE).bin
 
 run: image
-	$(MAKE) -C $(NPC_HOME) run ARGS="$(NPCFLAGS)" MROM=$(IMAGE).bin 
+	$(MAKE) -C $(NPC_HOME) run ARGS="$(SOCFLAGS)" MROM=$(IMAGE).bin  LOGFILE=$(shell dirname $(IMAGE).elf)/soc-log.txt 
