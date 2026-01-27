@@ -6,6 +6,7 @@
 #include "difftest.h"
 #include "VDUT.h"
 #include "VDUT__Dpi.h"
+#include <cstdint>
 #include <cstdio>
 #define MAX_INST_TO_PRINT 10
 
@@ -27,16 +28,15 @@ static char holder[1024];
 static void trace() {
   /*---- Instruction Trace ---- */
   #ifdef ITRACE
-  uint32_t cur_inst = pmem_read_trace(tb->pc);
-
+  uint32_t cur_inst = *(uint32_t*)guest_to_host_mrom(cpu_pc());
   char p[1024];
   memset(p, '\0', 1024);
   void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
   disassemble(p, sizeof(p),
-      tb->pc, (uint8_t *)&cur_inst, 4);
+      cpu_pc(), (uint8_t *)&cur_inst, 4);
 
   holder[0]  = '\0';
-  sprintf(holder,"0x%08x : ""0x%08x "" %s\n", tb->pc, cur_inst, p);
+  sprintf(holder,"0x%08x : ""0x%08x "" %s\n", cpu_pc(), cur_inst, p);
   RF_Write(&iring_buf, holder);
   
   // if(g_print_step) 
@@ -53,8 +53,8 @@ static void exec_once() {
     while(!cpu_done()){
      single_cycle();
     }
-  //printf("One inst execute state: %x\n", tb->done);
-  print_reg_status();
+  //printf("One inst execute state: %x\n",cpu_done());
+  //print_reg_status();
 
   // WatchPoint Trigger
 	if(WP_trigger()){
@@ -63,7 +63,7 @@ static void exec_once() {
 
   #ifdef DIFFTEST
   /* difftest */
-      //difftest_step(tb->pc, tb->pc);
+      difftest_step(cpu_pc(),0);
   #endif
 
 	if(ebreakYes()){
@@ -71,7 +71,8 @@ static void exec_once() {
     tb->eval();            // 更新信号状态
     contextp->timeInc(1);  // 时间增加 1 单位
 		npc_state.state = NPC_END;
-		//npc_state.halt_pc = tb->pc;
+		npc_state.halt_pc = cpu_pc();
+    npc_state.halt_ret = cpu_gpr(10);
   }
 }
 

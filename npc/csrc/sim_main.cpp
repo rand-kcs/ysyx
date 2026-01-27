@@ -10,6 +10,8 @@
 #include "svdpi.h"
 #include "VDUT__Dpi.h"
 #include "cpu.h"
+#include "VDUT___024root.h"
+#include "VDUT__Syms.h"
 
 VDUT* tb;
 VerilatedContext* contextp;
@@ -21,7 +23,10 @@ static void reset(int n) {
   tb->reset = 1;
   while (n -- > 0) single_cycle();
   tb->reset = 0;
+
+  while(tb->rootp->vlSymsp->TOP__ysyxSoCFull__asic__cpu__cpu.reset) single_cycle();
 }
+
  
 extern "C" void flash_read(int32_t addr, int32_t *data) { assert(0); }
 // extern "C" void mrom_read(int32_t addr, int32_t *data) { 
@@ -62,7 +67,7 @@ int main(int argc, char** argv){
   */
 
 	// Set Vtop's input;
-	reset(5);
+	reset(10);
 
 	// SDB import
 	sdb_main_loop();

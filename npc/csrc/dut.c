@@ -47,13 +47,12 @@ void init_difftest(char *ref_so_file, long img_size, int port) {
       "If it is not necessary, you can turn it off in menuconfig.", ref_so_file);
 
   ref_difftest_init(port);
-  ref_difftest_memcpy(RESET_VECTOR, guest_to_host(RESET_VECTOR), img_size, DIFFTEST_TO_REF);
+  ref_difftest_memcpy(RESET_VECTOR, guest_to_host_mrom(RESET_VECTOR), img_size, DIFFTEST_TO_REF);
   cpu.pc = RESET_VECTOR;
   ref_difftest_regcpy(&cpu, DIFFTEST_TO_REF);
 }
 
 bool isa_difftest_checkregs(CPU_state *ref) {
-  #ifdef NPC_DEBUG
   for(int i = 0; i < RISCV_GPR_NUM; i++){
     if(ref->gpr[i] != cpu_gpr(i)) {
        Log("Reg dont Match! id: %d\ntb: 0x%08x\nref: 0x%08x", i, cpu_gpr(i), ref->gpr[i]) ;
@@ -66,7 +65,6 @@ bool isa_difftest_checkregs(CPU_state *ref) {
   }
 
   //Log("Diff Check Pass\n");
- #endif
   return true;
 }
 
@@ -79,19 +77,17 @@ static void checkregs(CPU_state *ref, vaddr_t pc) {
 }
 
 void set_cpu(){
-  #ifdef NPC_DEBUG
   for(int i = 0; i < RISCV_GPR_NUM; i++){
-    cpu.gpr[i] = tb->rf_dbg[i];
+    cpu.gpr[i] = cpu_gpr(i);
   }
-  cpu.pc = tb->pc;
-  #endif
+  cpu.pc = cpu_pc();
 }
 
 void difftest_step(vaddr_t pc, vaddr_t npc) {
   CPU_state ref_r;
 
   if(is_skip_ref)  {
-    log_write("nemu skip at pc: " FMT_PADDR, pc);
+    log_write("nemu skip at npc: " FMT_PADDR, pc);
     set_cpu();
     ref_difftest_regcpy(&cpu, DIFFTEST_TO_REF);
     is_skip_ref = false;

@@ -6,6 +6,7 @@
 #include "mem.h"
 #include "utils.h"
 #include "macro.h"
+#include "cpu.h"
 
 void difftest_skip_ref();
 
@@ -67,7 +68,8 @@ uint8_t* guest_to_host(paddr_t paddr) { return (uint8_t*)pmem +  (paddr - CONFIG
 uint8_t* guest_to_host_mrom(paddr_t paddr) { return (uint8_t*)mrom +  (paddr - CONFIG_MROM_BASE)  ; }
 
 extern "C" void mrom_read(int32_t addr, int32_t *data) {
-  Log("READING MROM AT 0x%08x \n", addr);
+  // Log("READING MROM AT 0x%08x \n", addr);
+  // print_reg_status();
   char holder[256];
   sprintf(holder,"[npc]: Reading addr 0x%08x\n", addr);
   RF_Write(&mring_buf, holder);

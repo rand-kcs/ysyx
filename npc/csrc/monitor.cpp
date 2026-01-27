@@ -131,13 +131,15 @@ void init_monitor(int argc, char **argv) {
   long mrom_size = load_mrom();
 
 
-  IFDEF(ITRACE, init_disasm(
+  #ifdef ITRACE
+init_disasm(
                                "riscv32" "-pc-linux-gnu"
-  ));
+  );
+  #endif
 
   #ifdef DIFFTEST
   /* Initialize differential testing. */
-  init_difftest(ref_so_file, img_size, difftest_port);
+  init_difftest(ref_so_file, mrom_size, difftest_port);
   #endif
 
   init_sdb();

@@ -88,9 +88,17 @@ TOP_PATH= $(SOC_HOME)/build
 
 MROM ?= ../mykernel/build/char-test.bin
 
+ARGS ?=
+LOGFILE ?= $(BUILD_DIR)/npc-log.txt
+
+ifeq ($(BATCH),1)
+	ARGS += -b
+endif
+
 run:
 	$(VERILATOR) --public --cc --exe --build --prefix VDUT -j 0 $(VERILATOR_FLAGS) $(TRACEFLAG) $(NEW_LDFLAGS) $(INCFLAGS) $(NEW_CXXFLAGS)  $(CXXSRC)  $(TOP_PATH)/$(TOPNAME).v $(VSRC) --Mdir build/ --top-module $(TOPNAME)
-	./build/VDUT  --log=$(BUILD_DIR)/npc-log.txt --diff=ref/riscv32-nemu-interpreter-so --mrom=$(MROM) $(ARGS) $(IMG) 
+	echo " VALUE OF BATCH = " $(BATCH)
+	./build/VDUT $(ARGS) --log=$(LOGFILE) --diff=ref/riscv32-nemu-interpreter-so --mrom=$(MROM)   $(IMG) 
  
 clean:
 	rm -r build/

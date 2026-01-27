@@ -204,7 +204,6 @@ end
 
 
 reg [31:0] wdata_exu_buf;
-reg [3:0] wstrb_exu_buf;
 
 // 握手成功时的信息传递
 always@(posedge clk) begin
@@ -226,19 +225,18 @@ always@(posedge clk) begin
     is_ecall_buf <= is_ecall;
     is_mret_buf <= is_mret;
     wdata_exu_buf <= wdata_exu;
-    wstrb_exu_buf <= wmask[3:0];
   end
 end
 
 assign araddr = alu_out_buf;
 assign awaddr = alu_out_buf;
-assign wdata = wdata_exu_buf;
-assign wstrb = wstrb_exu_buf;
 
 
 // rdata_w stands for treated after origin rdata from DRAM
 wire [31:0] rdata_w;
-RDATA_Processor rdata_processor(rdata, func3, rdata_w);
+RDATA_Processor rdata_processor(rdata, func3, alu_out_buf[1:0], rdata_w);
+
+WDATA_Processor wdata_processor(.wdata_origin(wdata_exu_buf), .func3(func3), .addr_offset(alu_out_buf[1:0]), .wdata(wdata), .wstrb(wstrb));
 
 always @(posedge clk) begin
   if(rvalid && rready) begin
@@ -250,19 +248,5 @@ always @(posedge clk) begin
     bresp_out <= bresp;
 end
 
-
-//always @(mem_ren, raddr, waddr, wdata, wmask, mem_wen) begin
-//  if (valid_in_exu) begin
-//    if(mem_ren) begin // 有读写请求时
-//      rdata <= pmem_read(raddr);
-//    end
-//    if (mem_wen) begin // 有写请求时
-//      pmem_write(waddr, wdata, wmask);
-//    end
-//  end
-//  else begin
-//    rdata <= 0;
-//  end
-//end
 
 endmodule

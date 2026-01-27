@@ -9,7 +9,7 @@
 module ysyx_24100030(
     // 系统信号
     input               clock,
-    input               reset,
+    input               reset /*verilator public*/,
     input               io_interrupt,
     
     // AXI4 Master总线接口 - 完整AXI4协议
@@ -140,6 +140,43 @@ export "DPI-C" function ebreakYes;
 function ebreakYes;
     ebreakYes = !|((inst_ifu_idu & 32'hfff0707f) ^ 32'h00100073);
 endfunction
+
+// 定义合法地址区间
+    // 区间1: 0x2000_0000 ~ 0x2000_0FFF
+    wire is_read_region_1 = (io_master_araddr >= 32'h2000_0000 && io_master_araddr <= 32'h2000_0fff);
+    
+    // 区间2: 0x0F00_0000 ~ 0x0F00_1FFF (修正了原输入中的空格 typo)
+    wire is_read_region_2 = (io_master_araddr >= 32'h0f00_0000 && io_master_araddr <= 32'h0f00_1fff);
+
+    // 写区间: 0x0F00_0000 ~ 0x0F00_1FFF 
+    wire is_write_region_1  = (io_master_awaddr >= 32'h0f00_0000 && io_master_awaddr <= 32'h0f00_1fff);
+
+    wire is_write_region_2 =  io_master_awaddr === 32'h1000_0000;
+
+    always @(posedge clock) begin
+        if (!reset) begin
+            // 1. 检查读地址 (当读请求有效时)
+            if (io_master_arvalid) begin
+                if (!is_read_region_1 && !is_read_region_2) begin
+                    $display("\n[Error] Invalid Memory READ Access at time %t", $time);
+                    $display("        Address: 0x%h is out of bounds!", io_master_araddr);
+                    $display("        Valid Ranges: [0x20000000-0x20000fff] or [0x0f000000-0x0f001fff]");
+                    $fatal(1); // 终止仿真并返回错误码
+                end
+            end
+
+            // 2. 检查写地址 (当写请求有效时)
+            if (io_master_awvalid) begin
+                if (!is_write_region_1 && !is_write_region_2) begin
+                    $display("\n[Error] Invalid Memory WRITE Access at time %t", $time);
+                    $display("        Address: 0x%h is out of bounds!", io_master_awaddr);
+                    $display("        Valid Range: [0x0f000000-0x0f001fff]");
+                    $fatal(1); // 终止仿真并返回错误码
+                end
+            end
+        end
+    end
+
 
     reg [31:0]       pc  /*verilator public*/;
    reg              done/*verilator public*/;
