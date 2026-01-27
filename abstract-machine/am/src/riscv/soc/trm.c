@@ -33,10 +33,17 @@ void halt(int code) {
 extern char _erodata[];
 extern char _edata[];
 extern char _data[];
+extern char _ebss[];
+extern char _bss[];
 
 void _trm_init() {
   // copy data from rom to ram
   memcpy(_sram_start, _erodata, (_edata - _data));
+
+  // set .bss zero
+  memset(_bss, 0, _ebss - _bss);
+
+
 
   int ret = main(mainargs);
   halt(ret);
