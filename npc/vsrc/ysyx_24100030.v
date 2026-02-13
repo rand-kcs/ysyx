@@ -148,16 +148,31 @@ endfunction
     // 区间2: 0x0F00_0000 ~ 0x0F00_1FFF (修正了原输入中的空格 typo)
     wire is_read_region_2 = (io_master_araddr >= 32'h0f00_0000 && io_master_araddr <= 32'h0f00_1fff);
 
+    wire is_read_region_3 = (io_master_araddr >= 32'h1000_0000 && io_master_araddr <=32'h1000_0006)  ;
+
+    wire is_read_region_4 = (io_master_araddr >= 32'h3000_0000 && io_master_araddr <=32'h3fff_ffff)  ;
+    
+    // PSRAM
+    wire is_read_region_5 = (io_master_araddr >= 32'h8000_0000 && io_master_araddr <=32'h9fff_ffff)  ;
+
+    // SPI MASTER
+    wire is_read_region_6 = (io_master_araddr >= 32'h1000_1000 && io_master_araddr <=32'h1000_1fff)  ;
+
     // 写区间: 0x0F00_0000 ~ 0x0F00_1FFF 
     wire is_write_region_1  = (io_master_awaddr >= 32'h0f00_0000 && io_master_awaddr <= 32'h0f00_1fff);
 
-    wire is_write_region_2 =  io_master_awaddr === 32'h1000_0000;
+    wire is_write_region_2 = (io_master_awaddr >= 32'h1000_0000 && io_master_awaddr <=32'h1000_0006)  ;
+
+    // SPI MASTER
+    wire is_write_region_3 = (io_master_awaddr >= 32'h1000_1000 && io_master_awaddr <=32'h1000_1fff)  ;
+
+    wire is_write_region_4 = (io_master_awaddr >= 32'h8000_0000 && io_master_awaddr <=32'h9fff_ffff)  ;
 
     always @(posedge clock) begin
         if (!reset) begin
             // 1. 检查读地址 (当读请求有效时)
             if (io_master_arvalid) begin
-                if (!is_read_region_1 && !is_read_region_2) begin
+                if (!is_read_region_1 && !is_read_region_2 &&!is_read_region_3 && !is_read_region_4 && !is_read_region_5 && !is_read_region_6) begin
                     $display("\n[Error] Invalid Memory READ Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_araddr);
                     $display("        Valid Ranges: [0x20000000-0x20000fff] or [0x0f000000-0x0f001fff]");
@@ -167,7 +182,8 @@ endfunction
 
             // 2. 检查写地址 (当写请求有效时)
             if (io_master_awvalid) begin
-                if (!is_write_region_1 && !is_write_region_2) begin
+                //$display(" [log] WRITE Address: 0x%h", io_master_awaddr);
+                if (!is_write_region_1 && !is_write_region_2 &&!is_write_region_3 && !is_write_region_4) begin
                     $display("\n[Error] Invalid Memory WRITE Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_awaddr);
                     $display("        Valid Range: [0x0f000000-0x0f001fff]");
@@ -235,6 +251,7 @@ wire ifu_arvalid;
 wire ifu_arready;
 wire [31:0] ifu_rdata;
 wire [1:0] ifu_rresp;
+wire [2:0] ifu_arsize;
 wire ifu_rvalid;
 wire ifu_rready;
 
@@ -247,6 +264,7 @@ IFU ifu(
   .araddr(ifu_araddr),
   .arvalid(ifu_arvalid),
   .arready(ifu_arready),
+  .arsize(ifu_arsize),
   
   .rdata(ifu_rdata),
   .rresp(ifu_rresp),
@@ -416,6 +434,7 @@ wire is_mret_lsu;
 wire [31:0] lsu_araddr;
 wire lsu_arvalid;
 wire lsu_arready;
+wire [2:0] lsu_arsize;
 wire [31:0] lsu_rdata;
 wire [1:0] lsu_rresp;
 wire lsu_rvalid;
@@ -444,6 +463,7 @@ LSU lsu(
   .araddr(lsu_araddr),     
   .arvalid(lsu_arvalid),   
   .arready(lsu_arready),   
+  .arsize(lsu_arsize),
   
   .rdata(lsu_rdata),       
   .rresp(lsu_rresp),       
@@ -506,6 +526,7 @@ LSU lsu(
 
 // ========== ARBITER到顶层AXI接口的连接信号 ==========
 wire [31:0] arb_to_axi_araddr;
+wire [2:0]  arb_to_axi_arsize;
 wire        arb_to_axi_arvalid;
 wire        arb_to_axi_arready;
 wire [31:0] arb_to_axi_rdata;
@@ -533,6 +554,7 @@ ARBITER arbiter(
   .m0_araddr(ifu_araddr),
   .m0_arvalid(ifu_arvalid),
   .m0_arready(ifu_arready),
+  .m0_arsize(ifu_arsize),
   
   // 读数据通道
   .m0_rdata(ifu_rdata),
@@ -561,6 +583,7 @@ ARBITER arbiter(
   .m1_araddr(lsu_araddr),
   .m1_arvalid(lsu_arvalid),
   .m1_arready(lsu_arready),
+  .m1_arsize(lsu_arsize),
   
   // 读数据通道
   .m1_rdata(lsu_rdata),
@@ -589,6 +612,7 @@ ARBITER arbiter(
   .s_araddr(arb_to_axi_araddr),
   .s_arvalid(arb_to_axi_arvalid),
   .s_arready(arb_to_axi_arready),
+  .s_arsize(arb_to_axi_arsize),
   
   // 读数据通道
   .s_rdata(arb_to_axi_rdata),
@@ -677,7 +701,7 @@ assign io_master_arvalid = arb_to_axi_arvalid;
 assign io_master_araddr  = arb_to_axi_araddr;
 assign io_master_arid    = 4'b0;      // 固定ID为0，单主设备
 assign io_master_arlen   = 8'b0;      // 突发长度为1（AXI4-Lite模式）
-assign io_master_arsize  = 3'b010;    // 4字节（32位）
+assign io_master_arsize  = arb_to_axi_arsize;
 assign io_master_arburst = 2'b00;     // 
 assign arb_to_axi_arready = io_master_arready;
 
