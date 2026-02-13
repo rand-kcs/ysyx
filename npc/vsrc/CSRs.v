@@ -26,6 +26,10 @@ module CSRs #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
       return &(cpu.mepc);
     case 0x342:
       return &(cpu.mcause);
+    case 0xF11:
+      return &(cpu.mvendorid);
+    case 0xF12:
+      return &(cpu.marchid);
 */
 
 reg [DATA_WIDTH-1:0] mcause;
@@ -34,11 +38,18 @@ reg [DATA_WIDTH-1:0] mstatus;
 reg [DATA_WIDTH-1:0] mepc;
 reg [DATA_WIDTH-1:0] mtvec;
 
+reg [DATA_WIDTH-1:0] mvendorid;
+reg [DATA_WIDTH-1:0] marchid;
+
 wire [DATA_WIDTH-1:0] csr_data;
 
 // WBU  control;
 always@(posedge clk) begin
-  if (rst) mstatus <= 32'h1800;
+  if (rst) begin 
+    mstatus <= 32'h1800;
+    mvendorid <= 32'h79737978;
+    marchid <= 32'd24100030;
+  end
   if(valid_wbu) begin
     if(is_ecall_wbu) begin
       mepc <= pc;
@@ -58,11 +69,13 @@ end
 
 
 // IDU control
-MuxKeyWithDefault #(4, 12, 32) csr_data_Mux(csr_data, raddr, 32'b0, {
+MuxKeyWithDefault #(6, 12, 32) csr_data_Mux(csr_data, raddr, 32'b0, {
   {12'h300} , mstatus,
   {12'h305} , mtvec ,
   {12'h341} , mepc ,
-  {12'h342} , mcause 
+  {12'h342} , mcause,
+  {12'hF11} , mvendorid ,
+  {12'hF12} , marchid
 });
 
 wire [2:0] select;

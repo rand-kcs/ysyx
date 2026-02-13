@@ -5,6 +5,7 @@ module ARBITER (
   // 主设备0接口
   input [31:0] m0_araddr,
   input        m0_arvalid,
+  input [2:0]   m0_arsize,
   output reg   m0_arready,      // 改为reg
   
   output reg [31:0] m0_rdata,   // 改为reg
@@ -28,6 +29,7 @@ module ARBITER (
   // 主设备1接口
   input [31:0]  m1_araddr,
   input         m1_arvalid,
+  input [2:0]   m1_arsize,
   output reg    m1_arready,     // 改为reg
   
   output reg [31:0] m1_rdata,   // 改为reg
@@ -51,6 +53,7 @@ module ARBITER (
   // 从设备接口
   output reg [31:0] s_araddr,   // 改为reg
   output reg        s_arvalid,  // 改为reg
+  output reg [2:0]  s_arsize,
   input             s_arready,
   
   input [31:0]  s_rdata,
@@ -200,6 +203,7 @@ always @(*) begin
     m1_rvalid = 1'b0;
     
     s_araddr = 32'b0;
+    s_arsize = 3'b010;
     s_arvalid = 1'b0;
     s_rready = 1'b0;
     
@@ -209,9 +213,11 @@ always @(*) begin
             s_arvalid = m0_arvalid | m1_arvalid; 
             if (m0_arvalid === 1'b1) begin
                 s_araddr = m0_araddr;
+                s_arsize = m0_arsize;
             end 
             else begin
                 s_araddr = m1_araddr;
+                s_arsize = m1_arsize;
             end
             // TO MASTER
             m0_arready = s_arready; 

@@ -12,6 +12,7 @@ module IFU (
   output reg [31:0] araddr,
   output arvalid,
   input arready,
+  output [2:0] arsize,
 
   input [31:0] rdata,
   input [1:0] rresp,
@@ -35,6 +36,8 @@ reg [1:0] current_state;
 
 // state trans reg;
 Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
+
+assign arsize = 3'b010;
 
 
 // the state trans logic
