@@ -7,7 +7,7 @@
 
 // longest string one time is 128!
 int printf(const char *fmt, ...) {
-  char total[256];
+  char total[128];
 	va_list ap;
 	va_start(ap, fmt);
 
@@ -19,11 +19,11 @@ int printf(const char *fmt, ...) {
 }
 
 int vsprintf(char *out, const char *fmt, va_list ap) {
-     out[0] = '\0';
 		 int d;
 		 char c;
 		 char *s;
-		 char tmp[256];
+		 char tmp[128];
+     memset(out, 0, 127);
      int width = -1;
 		 while (*fmt){
 				if(*fmt == '%'){
