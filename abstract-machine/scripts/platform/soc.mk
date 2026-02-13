@@ -4,6 +4,7 @@ AM_SRCS := riscv/soc/start.S \
            riscv/soc/timer.c \
            riscv/soc/input.c \
            riscv/soc/cte.c \
+           riscv/soc/bootloader.c \
            riscv/soc/trap.S \
            platform/dummy/vme.c \
            platform/dummy/mpe.c
@@ -37,4 +38,9 @@ image: $(IMAGE).elf
 	@$(OBJCOPY) -S  -O binary $(IMAGE).elf $(IMAGE).bin
 
 run: image
-	$(MAKE) -C $(NPC_HOME) run ARGS="$(SOCFLAGS)" MROM=$(IMAGE).bin  LOGFILE=$(shell dirname $(IMAGE).elf)/soc-log.txt 
+	$(MAKE) -C $(NPC_HOME) run ARGS="$(SOCFLAGS)" FLASH=$(IMAGE).bin  LOGFILE=$(shell dirname $(IMAGE).elf)/soc-log.txt 
+
+
+debug: image
+	$(MAKE) -C $(NPC_HOME) debug ARGS="$(SOCFLAGS)" FLASH=$(IMAGE).bin  LOGFILE=$(shell dirname $(IMAGE).elf)/soc-log.txt 
+
