@@ -28,7 +28,9 @@ static char holder[1024];
 static void trace() {
   /*---- Instruction Trace ---- */
   #ifdef ITRACE
-  uint32_t cur_inst = *(uint32_t*)guest_to_host_mrom(cpu_pc());
+  uint32_t paddr = cpu_pc();
+  uint32_t cur_inst = (paddr >= 0x20000000 && paddr <= 0x20000fff) ? *(uint32_t*)guest_to_host_mrom(cpu_pc())
+    : (paddr >= 0x30000000 && paddr <= 0x3fffffff) ? *(uint32_t*)guest_to_host_flash(cpu_pc()) : 0;
   char p[1024];
   memset(p, '\0', 1024);
   void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
@@ -39,9 +41,9 @@ static void trace() {
   sprintf(holder,"0x%08x : ""0x%08x "" %s\n", cpu_pc(), cur_inst, p);
   RF_Write(&iring_buf, holder);
   
-  // if(g_print_step) 
+  if(g_print_step) 
   // change to always print 
-	//printf("sdb: 0x%08x : 0x%08x     %s\n", tb->pc, cur_inst, p);
+	  printf("sdb: 0x%08x : 0x%08x     %s\n", cpu_pc(), cur_inst, p);
 
   #endif
   

@@ -56,16 +56,35 @@ uint8_t pmem[CONFIG_MSIZE] = {};
 
 uint8_t mrom[CONFIG_MROM_SIZE] = {};
 
+uint32_t flash[CONFIG_FLASH_SIZE] = {
+  0x100007b7,
+  0x04100713,
+  0x00e78023,
+  0x00000793,
+  0x00078513,
+  0x00100073,
+  0x00008067,
+};
+
 void load_default_img(){
   memcpy(guest_to_host(RESET_VECTOR), img, sizeof(img));
 }
 
 // pmem as pointer type, add 1 equals to add 4 in real place.
-uint8_t* guest_to_host(paddr_t paddr) { return (uint8_t*)pmem +  (paddr - CONFIG_MBASE)  ; }
 //paddr_t host_to_guest(uint8_t *haddr) { return haddr     - pmem + CONFIG_MBASE; }
 
+uint8_t* guest_to_host(paddr_t paddr) { return (uint8_t*)pmem +  (paddr - CONFIG_MBASE)  ; }
 
-uint8_t* guest_to_host_mrom(paddr_t paddr) { return (uint8_t*)mrom +  (paddr - CONFIG_MROM_BASE)  ; }
+uint8_t* guest_to_host_mrom(paddr_t paddr) 
+{ if(paddr >= 0x20000000 && paddr <= 0x20000fff)
+    return (uint8_t*)mrom +  (paddr - CONFIG_MROM_BASE) ; 
+  else 
+    Log("Inst addr not in mrom 0x%08x, Return zero\n", paddr);
+    return 0;
+}
+
+uint8_t* guest_to_host_flash(paddr_t paddr) { return (uint8_t*)flash +  (paddr&0xffffff)  ; }
+
 
 extern "C" void mrom_read(int32_t addr, int32_t *data) {
   // Log("READING MROM AT 0x%08x \n", addr);
@@ -73,8 +92,18 @@ extern "C" void mrom_read(int32_t addr, int32_t *data) {
   char holder[256];
   sprintf(holder,"[npc]: Reading addr 0x%08x\n", addr);
   RF_Write(&mring_buf, holder);
+  *data = *(uint32_t*)guest_to_host_mrom(addr);
+}
 
-    *data = *(uint32_t*)guest_to_host_mrom(addr);
+
+extern "C" void flash_read(int32_t addr, int32_t *data) {
+   //Log("READING FLASH AT 0x%08x \n", addr);
+   //print_reg_status();
+  char holder[256];
+  sprintf(holder,"[npc]: Reading addr(flash) 0x%08x\n", addr);
+  RF_Write(&mring_buf, holder);
+
+    *data = *(uint32_t*)guest_to_host_flash(addr);
 }
 
 
