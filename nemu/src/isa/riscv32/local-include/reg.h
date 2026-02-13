@@ -31,8 +31,8 @@ static inline const char* reg_name(int idx) {
   return regs[check_reg_idx(idx)];
 }
 
-static inline word_t* SR(int i){
-  switch (i) {
+static inline word_t* SR(word_t i){
+  switch (i&0xFFF) {
     case 0x300:
       return &(cpu.mstatus);
     case 0x305:
@@ -41,8 +41,14 @@ static inline word_t* SR(int i){
       return &(cpu.mepc);
     case 0x342:
       return &(cpu.mcause);
+    case 0xF11:
+      cpu.mvendorid = 0x79737978;
+      return &(cpu.mvendorid);
+    case 0xF12:
+      cpu.marchid = 24100030;
+      return &(cpu.marchid);
     default:
-      panic("Non exist Staus Register.");
+      panic("Non exist Staus Register...%x", i);
   }
 }
 enum {
