@@ -2,6 +2,8 @@
 #include <riscv/riscv.h>
 #include <klib-macros.h>
 #include "include/soc.h"
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 extern char _heap_start;
@@ -22,6 +24,7 @@ Area heap = RANGE(&_heap_start, SRAM_END);
 static const char mainargs[] = MAINARGS;
 
 void putch(char ch) {
+  while ((inb(UART_LSR) & (1<<5)) == 0);
   outb(SERIAL_PORT, ch);
 }
 
@@ -33,17 +36,27 @@ void halt(int code) {
 extern char _erodata[];
 extern char _edata[];
 extern char _data[];
-extern char _ebss[];
-extern char _bss[];
 
 void _trm_init() {
-  // copy data from rom to ram
-  memcpy(_sram_start, _erodata, (_edata - _data));
+  // 10000011b
+  // 1. enable divisor latch access
+  outb(0x10000003,0x83);
 
-  // set .bss zero
-  memset(_bss, 0, _ebss - _bss);
+  // 2. set divisor latch byte  LSB
+  outb(0x10000000,0x10);
 
+  // 3. disable divisor latch access
+  outb(0x10000003,0x03);
 
+  // 4. FCR fifo control 
+  outb(0x10000002,0xff);
+
+  // uintptr_t id;
+  // asm volatile("csrr %0, 0xf11" : "=r"(id));
+  // printf("Vendor ID: 0x%x\n", id);
+  //
+  // asm volatile("csrr %0, 0xf12" : "=r"(id));
+  // printf("Arch ID: %x\n", id);
 
   int ret = main(mainargs);
   halt(ret);
