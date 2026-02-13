@@ -6,6 +6,7 @@ module LSU(
   output reg [31:0] araddr,
   output arvalid,
   input arready,
+  output [2:0] arsize,
 
   input [31:0] rdata,
   input [1:0] rresp,
@@ -231,10 +232,20 @@ end
 assign araddr = alu_out_buf;
 assign awaddr = alu_out_buf;
 
+always @(*) begin
+  case (func3)
+    3'b000: arsize = 3'b000 ;// LB
+    3'b001: arsize = 3'b001 ;// LH
+    3'b010: arsize = 3'b010 ;                        // LW
+    3'b100:  arsize = 3'b000; // LBU
+    3'b101:  arsize = 3'b001; // LHU
+    default: arsize = 3'b010;                         // LW
+  endcase
+end
 
 // rdata_w stands for treated after origin rdata from DRAM
 wire [31:0] rdata_w;
-RDATA_Processor rdata_processor(rdata, func3, alu_out_buf[1:0], rdata_w);
+RDATA_Processor rdata_processor(rdata, func3, alu_out_buf[1:0], araddr, rdata_w);
 
 WDATA_Processor wdata_processor(.wdata_origin(wdata_exu_buf), .func3(func3), .addr_offset(alu_out_buf[1:0]), .wdata(wdata), .wstrb(wstrb));
 
