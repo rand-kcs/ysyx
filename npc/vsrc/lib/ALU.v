@@ -39,9 +39,9 @@ MuxKeyWithDefault #(10, 10, 32) aluMux (out, funcEU, 32'b0, {
 	{3'h4, 7'h00}, asrc1 ^ asrc2,
 	{3'h6, 7'h00}, asrc1 | asrc2,
 	{3'h7, 7'h00}, asrc1 & asrc2,
-	{3'h1, 7'h00}, asrc1 << asrc2,
-	{3'h5, 7'h00}, asrc1 >> asrc2,
-	{3'h5, 7'h20}, $signed(asrc1) >>> asrc2,     // sign extend
+	{3'h1, 7'h00}, asrc1 << asrc2[4:0],
+	{3'h5, 7'h00}, asrc1 >> asrc2[4:0],
+	{3'h5, 7'h20}, $signed(asrc1) >>> asrc2[4:0],     // sign extend
 
 	{3'h2, 7'h00}, {31'b0, sign_cmp  }, // Signed Cmp
 	{3'h3, 7'h00}, {31'b0, unsign_cmp} //Unsigned Cmp
