@@ -54,6 +54,7 @@ void     ioe_read    (int reg, void *buf);
 void     ioe_write   (int reg, void *buf);
 #include "amdev.h"
 
+char     getch       ();
 // ---------- CTE: Interrupt Handling and Context Switching ----------
 bool     cte_init    (Context *(*handler)(Event ev, Context *ctx));
 void     yield       (void);

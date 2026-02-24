@@ -1,5 +1,9 @@
 #include <am.h>
 #include <klib-macros.h>
+#include <riscv/riscv.h>
+#include <klib-macros.h>
+#include <stdint.h>
+#include <klib.h>
 
 void __am_timer_init();
 
@@ -32,3 +36,5 @@ bool ioe_init() {
 
 void ioe_read (int reg, void *buf) { ((handler_t)lut[reg])(buf); }
 void ioe_write(int reg, void *buf) { ((handler_t)lut[reg])(buf); }
+
+

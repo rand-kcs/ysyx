@@ -1,5 +1,5 @@
 #include <am.h>
-#include <npc.h>
+#include <soc.h>
 #include <riscv/riscv.h>
 
 

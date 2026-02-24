@@ -15,7 +15,7 @@ LDFLAGS   += -T $(AM_HOME)/scripts/soc_linker.ld \
 						 --defsym=_sram_start=0x0f000000 
 LDFLAGS   += --gc-sections -e _start
 CFLAGS += -DMAINARGS=\"$(mainargs)\"
-CFLAGS += -I$(AM_HOME)/am/src/riscv/npc/include
+CFLAGS += -I$(AM_HOME)/am/src/riscv/soc/include
 
 
 ifeq ($(BATCH),1)

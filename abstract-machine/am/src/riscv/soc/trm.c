@@ -32,6 +32,17 @@ void putch(char ch) {
   outb(SERIAL_PORT, ch);
 }
 
+char getch() {
+  char ch;
+  if ((inb(UART_LSR) & (1)) == 0)
+    return -1;
+  else{
+    ch = inb(SERIAL_PORT);
+    return ch;
+  }
+
+}
+
 void halt(int code) {
 	asm volatile("mv a0, %0; ebreak" : :"r"(code));
   while (1);
@@ -47,7 +58,7 @@ void _trm_init() {
   outb(0x10000003,0x83);
 
   // 2. set divisor latch byte  LSB
-  outb(0x10000000,0x10);
+  outb(0x10000000,0x01);
 
   // 3. disable divisor latch access
   outb(0x10000003,0x03);
@@ -62,6 +73,7 @@ void _trm_init() {
   // asm volatile("csrr %0, 0xf12" : "=r"(id));
   // printf("Arch ID: %x\n", id);
 
+  printf("loader done, ready to go!\n");
   int ret = main(mainargs);
   halt(ret);
 }
