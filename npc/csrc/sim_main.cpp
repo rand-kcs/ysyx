@@ -12,12 +12,16 @@
 #include "cpu.h"
 #include "VDUT___024root.h"
 #include "VDUT__Syms.h"
+#include <nvboard.h>
 
 VDUT* tb;
 VerilatedContext* contextp;
 void init_monitor(int, char**);
 void sdb_main_loop();
 int is_exit_status_bad() ;
+
+
+void nvboard_bind_all_pins(VDUT* top);
 
 static void reset(int n) {
   tb->reset = 1;
@@ -37,6 +41,7 @@ static void reset(int n) {
 int main(int argc, char** argv){
 	//Verilated::mkdir("logs");
 
+
 	// Construct a VerilatedContext to hold simulation time, etc.
 	contextp = new VerilatedContext;
 	
@@ -48,6 +53,9 @@ int main(int argc, char** argv){
 
 	//Construct the Verilated Model, From Vtop.h 
 	tb = new VDUT{contextp};
+
+  nvboard_bind_all_pins(tb);
+  nvboard_init();
 
 	const svScope scope = svGetScopeFromName("TOP.ysyxSoCFull.asic.cpu.cpu");
   // 在 Verilated 初始化之后，Scope 获取之前

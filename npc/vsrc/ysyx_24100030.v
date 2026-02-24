@@ -160,6 +160,12 @@ endfunction
 
     // SDRAM
     wire is_read_region_7 = (io_master_araddr >= 32'ha000_0000 && io_master_araddr <=32'hbfff_ffff)  ;
+    
+    // UART
+    wire is_read_region_8 = (io_master_araddr >= 32'h1000_2000 && io_master_araddr <=32'h1000_200f)  ;
+
+    // UART
+    wire is_read_region_9 = (io_master_araddr >= 32'h1001_1000 && io_master_araddr <=32'h1001_1007)  ;
 
     // 写区间: 0x0F00_0000 ~ 0x0F00_1FFF 
     wire is_write_region_1  = (io_master_awaddr >= 32'h0f00_0000 && io_master_awaddr <= 32'h0f00_1fff);
@@ -172,12 +178,14 @@ endfunction
     wire is_write_region_4 = (io_master_awaddr >= 32'h8000_0000 && io_master_awaddr <=32'h9fff_ffff)  ;
 
     wire is_write_region_5 = (io_master_awaddr >= 32'ha000_0000 && io_master_awaddr <=32'hbfff_ffff)  ;
-    
+   //UART 
+    wire is_write_region_6 = (io_master_awaddr >= 32'h1000_2000 && io_master_awaddr <=32'h1000_200f)  ;
+
     always @(posedge clock) begin
         if (!reset) begin
             // 1. 检查读地址 (当读请求有效时)
             if (io_master_arvalid) begin
-                if (!is_read_region_1 && !is_read_region_2 &&!is_read_region_3 && !is_read_region_4 && !is_read_region_5 && !is_read_region_6& !is_read_region_7) begin
+                if (!is_read_region_1 && !is_read_region_2 &&!is_read_region_3 && !is_read_region_4 && !is_read_region_5 && !is_read_region_6& !is_read_region_7 &!is_read_region_8 &!is_read_region_9) begin
                     $display("\n[Error] Invalid Memory READ Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_araddr);
                     $display("        Valid Ranges: [0x20000000-0x20000fff] or [0x0f000000-0x0f001fff]");
@@ -187,8 +195,9 @@ endfunction
 
             // 2. 检查写地址 (当写请求有效时)
             if (io_master_awvalid) begin
+                //$display("    WRITE AT Address: 0x%h  DATA: 0x%h", io_master_awaddr, io_master_wdata);
                 //$display(" [log] WRITE Address: 0x%h", io_master_awaddr);
-                if (!is_write_region_1 && !is_write_region_2 &&!is_write_region_3 && !is_write_region_4 &! is_write_region_5) begin
+                if (!is_write_region_1 && !is_write_region_2 &&!is_write_region_3 && !is_write_region_4 &! is_write_region_5 &!is_write_region_6) begin
                     $display("\n[Error] Invalid Memory WRITE Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_awaddr);
                     $display("        Valid Range: [0x0f000000-0x0f001fff]");

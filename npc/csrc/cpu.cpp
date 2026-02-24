@@ -7,7 +7,9 @@
 #include "VDUT___024root.h"
 #include "VDUT__Syms.h"
 #include <cstdint>
+#include <nvboard.h>
 
+void nvboard_update();
 const char *regs[] = {
   "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
   "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -46,6 +48,7 @@ word_t isa_reg_str2val(const char *s, bool *success) {
 
 
 void single_cycle() {                      
+   nvboard_update();
    tb->clock = 0; tb->eval();
    contextp->timeInc(1);
    tb->clock= 1; tb->eval();
