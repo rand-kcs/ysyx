@@ -75,7 +75,7 @@ int main(int argc, char** argv){
   */
 
 	// Set Vtop's input;
-	reset(10);
+	reset(20);
 
 	// SDB import
 	sdb_main_loop();
