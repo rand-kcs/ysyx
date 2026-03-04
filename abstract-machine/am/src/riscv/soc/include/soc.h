@@ -5,7 +5,7 @@
 #define SERIAL_PORT     (0x10000000)
 #define UART_LSR        (0x10000005)
 #define KBD_ADDR        (0x10011000)
-#define RTC_ADDR        (DEVICE_BASE + 0x0000048)
+#define RTC_ADDR        (0x02000000)
 
 #define VGACTL_ADDR     (DEVICE_BASE + 0x0000100)
 #define AUDIO_ADDR      (DEVICE_BASE + 0x0000200)
