@@ -47,11 +47,14 @@ word_t isa_reg_str2val(const char *s, bool *success) {
 
 
 
+extern uint64_t g_nr_total_cycle; 
 void single_cycle() {                      
    nvboard_update();
    tb->clock = 0; tb->eval();
    contextp->timeInc(1);
    tb->clock= 1; tb->eval();
    contextp->timeInc(1);
+  g_nr_total_cycle++;
+
  }
 
