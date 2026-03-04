@@ -82,6 +82,30 @@ assign raddr = alu_out;
 assign waddr = alu_out;
 
 
+// === 新增：极简版 mtime 计时器逻辑 ===
+// 仅拦截 0x0200_0000 和 0x0200_0004 两个地址
+wire is_mtime = (alu_out == 32'h0200_0000 || alu_out == 32'h0200_0004); 
+
+reg [63:0] mtime;
+
+// 维护 mtime 计数器，并处理软件写操作防止 AXI 死锁
+always @(posedge clk) begin
+    if (rst) begin
+        mtime <= 64'd0;
+    end else if (valid_in_exu && ready_out_exu && is_mtime && mem_wen) begin
+        // 软件有可能写入 mtime，将其拦截并更新内部寄存器，不发往 AXI
+        if (alu_out == 32'h0200_0000)
+            mtime[31:0] <= wdata_exu;
+        else if (alu_out == 32'h0200_0004)
+            mtime[63:32] <= wdata_exu;
+    end else begin
+        // 正常计时，每拍加 1
+        mtime <= mtime + 64'd1;
+    end
+end
+// ==================================
+
+
 // ========== 1. 状态定义与状态寄存器 ==========
 // 使用独热码(one-hot)或二进制码(binary)，用parameter定义状态名
 localparam [2:0] IDLE = 3'b00,
@@ -106,7 +130,10 @@ always@(*) begin
   case (current_state)
     IDLE : begin
       if(valid_in_exu) begin
-        if(mem_ren) 
+        // === 修改：如果是 mtime 地址，直接跳到 WBU，绕开 AXI 状态机 ===
+        if(is_mtime)
+          next_state = WAIT_WBU;
+        else if(mem_ren) 
           next_state = WAIT_ARREADY;
         else if(mem_wen)
           next_state = WAIT_WAWREADY;
@@ -209,7 +236,6 @@ reg [31:0] wdata_exu_buf;
 // 握手成功时的信息传递
 always@(posedge clk) begin
   if (valid_in_exu && ready_out_exu) begin  // EXU -- IFU 之间的握手
-    //rdata_w_buf <= rdata_w;
    
     // Direct Pass 
     ben_buf <= ben;
@@ -219,13 +245,21 @@ always@(posedge clk) begin
     csr_out_buf <= csr_out;
     alu_out_buf <= alu_out;
     gpr_wen_buf <=  gpr_wen;
-    rd_buf <= rd;
     csr_wen_buf <= csr_wen;
     csr_waddr_buf <= csr_waddr;
     csr_wdata_buf <= csr_wdata;
     is_ecall_buf <= is_ecall;
     is_mret_buf <= is_mret;
     wdata_exu_buf <= wdata_exu;
+
+    // === 新增：mtime 读操作旁路机制 ===
+    // 如果是读取 mtime，提前把数据塞进 rdata_buf
+    if (is_mtime && mem_ren) begin
+        if      (alu_out == 32'h0200_0000) rdata_buf <= mtime[31:0];
+        else if (alu_out == 32'h0200_0004) rdata_buf <= mtime[63:32];
+        else                               rdata_buf <= 32'd0;
+    end
+    // ==================================
   end
 end
 
@@ -250,6 +284,7 @@ RDATA_Processor rdata_processor(rdata, func3, alu_out_buf[1:0], araddr, rdata_w)
 WDATA_Processor wdata_processor(.wdata_origin(wdata_exu_buf), .func3(func3), .addr_offset(alu_out_buf[1:0]), .wdata(wdata), .wstrb(wstrb));
 
 always @(posedge clk) begin
+  // 这里的 AXI 返回逻辑不动。对于 mtime 访问，rvalid 永远为低，不会覆盖 rdata_buf
   if(rvalid && rready) begin
     rdata_buf <= rdata_w;
     rresp_out <= rresp;
@@ -258,6 +293,5 @@ always @(posedge clk) begin
   if(bready && bvalid)
     bresp_out <= bresp;
 end
-
 
 endmodule
