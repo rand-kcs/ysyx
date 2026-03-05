@@ -50,5 +50,4 @@ void __am_input_keybrd(AM_INPUT_KEYBRD_T *kbd) {
 
     // 6. 状态机复位，准备迎接下一次按键
     is_keyup = 0;
-    printf("get code: %x\n", code);
 }
