@@ -181,6 +181,9 @@ endfunction
    //UART 
     wire is_write_region_6 = (io_master_awaddr >= 32'h1000_2000 && io_master_awaddr <=32'h1000_200f)  ;
 
+   //VGA FRAME buffer
+    wire is_write_region_7 = (io_master_awaddr >= 32'h2100_0000 && io_master_awaddr <=32'h211f_ffff)  ;
+
     always @(posedge clock) begin
         if (!reset) begin
             // 1. 检查读地址 (当读请求有效时)
@@ -197,7 +200,7 @@ endfunction
             if (io_master_awvalid) begin
                 //$display("    WRITE AT Address: 0x%h  DATA: 0x%h", io_master_awaddr, io_master_wdata);
                 //$display(" [log] WRITE Address: 0x%h", io_master_awaddr);
-                if (!is_write_region_1 && !is_write_region_2 &&!is_write_region_3 && !is_write_region_4 &! is_write_region_5 &!is_write_region_6) begin
+                if (!is_write_region_1 && !is_write_region_2 &&!is_write_region_3 && !is_write_region_4 &! is_write_region_5 &!is_write_region_6 &!is_write_region_7) begin
                     $display("\n[Error] Invalid Memory WRITE Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_awaddr);
                     $display("        Valid Range: [0x0f000000-0x0f001fff]");

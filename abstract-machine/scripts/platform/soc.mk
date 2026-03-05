@@ -3,6 +3,7 @@ AM_SRCS := riscv/soc/start.S \
            riscv/soc/ioe.c \
            riscv/soc/timer.c \
            riscv/soc/input.c \
+           riscv/soc/gpu.c \
            riscv/soc/cte.c \
            riscv/soc/bootloader.c \
            riscv/soc/trap.S \
