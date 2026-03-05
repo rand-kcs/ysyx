@@ -29,7 +29,7 @@ module LSU(
 
   input valid_in_exu,
   output ready_out_exu,
-
+ 
   output valid_out_wbu,
 
   // 传递给 WBU
@@ -175,57 +175,49 @@ always@(*) begin
 end
 
 
-// ========== 3. 输出逻辑 ==========
-// 摩尔型输出（输出仅取决于当前状态）
-always @(*) begin
-    // 对于EXU 和 WBU 沟通
-    ready_out_exu = 1'b0;
-    valid_out_wbu = 1'b0;
+// LSU/WB 流水寄存器的 valid 标志
+reg lsu_valid;
 
-    // 对于和DRAM 的沟通
-    arvalid =1'b0;
-    rready = 1'b0;
+// ========== 3. 输出逻辑 ==========
+// ready/valid 语义：
+// - 仅当 LSU 处于 IDLE（当前没有待处理指令）时，对 EXU 拉高 ready_out_exu
+// - 当 LSU 内部已有一条指令且状态机到达 WAIT_WBU 时，对 WBU 拉高 valid_out_wbu
+assign ready_out_exu = (current_state == IDLE) && ~lsu_valid;
+assign valid_out_wbu = lsu_valid && (current_state == WAIT_WBU);
+
+// AXI 信号仍然由状态机驱动
+always @(*) begin
+    // 对于和 DRAM 的沟通
+    arvalid = 1'b0;
+    rready  = 1'b0;
     awvalid = 1'b0;
-    wvalid = 1'b0;
-    bready = 1'b0;
+    wvalid  = 1'b0;
+    bready  = 1'b0;
 
     case (current_state)
-      IDLE: begin
-      // 对于EXU 和 WBU 沟通
-      ready_out_exu = 1'b1;
-      end
-
-      WAIT_WBU: begin 
-        valid_out_wbu = 1'b1;
-      end 
-
       WAIT_ARREADY: begin
         arvalid = 1'b1;
       end
 
-      WAIT_RVALID:begin
+      WAIT_RVALID: begin
         rready = 1'b1;
       end
 
-      WAIT_WAWREADY:begin
+      WAIT_WAWREADY: begin
         awvalid = 1'b1;
-        wvalid = 1'b1;
+        wvalid  = 1'b1;
       end
-      
+
       WAIT_BVALID: begin
         bready = 1'b1;
       end
 
       default: begin
-        ready_out_exu = 1'b0;
-        valid_out_wbu = 1'b0;
-
-        // 对于和DRAM 的沟通
-        arvalid =1'b0;
-        rready = 1'b0;
+        arvalid = 1'b0;
+        rready  = 1'b0;
         awvalid = 1'b0;
-        wvalid = 1'b0;
-        bready = 1'b0;
+        wvalid  = 1'b0;
+        bready  = 1'b0;
       end
     endcase
 end
@@ -233,33 +225,43 @@ end
 
 reg [31:0] wdata_exu_buf;
 
-// 握手成功时的信息传递
+// 接收来自 EXU 的请求，并在 WAIT_WBU 后清除 lsu_valid
 always@(posedge clk) begin
-  if (valid_in_exu && ready_out_exu) begin  // EXU -- IFU 之间的握手
-   
-    // Direct Pass 
-    ben_buf <= ben;
-    opcode_buf <= opcode;
-    pc_buf <= pc;
-    rd_buf <= rd;
-    csr_out_buf <= csr_out;
-    alu_out_buf <= alu_out;
-    gpr_wen_buf <=  gpr_wen;
-    csr_wen_buf <= csr_wen;
-    csr_waddr_buf <= csr_waddr;
-    csr_wdata_buf <= csr_wdata;
-    is_ecall_buf <= is_ecall;
-    is_mret_buf <= is_mret;
-    wdata_exu_buf <= wdata_exu;
+  if (rst) begin
+    lsu_valid <= 1'b0;
+  end
+  else begin
+    // EXU -> LSU 握手成功：记录一条新的指令
+    if (valid_in_exu && ready_out_exu) begin
+      lsu_valid <= 1'b1;
 
-    // === 新增：mtime 读操作旁路机制 ===
-    // 如果是读取 mtime，提前把数据塞进 rdata_buf
-    if (is_mtime && mem_ren) begin
+      // Direct Pass 
+      ben_buf       <= ben;
+      opcode_buf    <= opcode;
+      pc_buf        <= pc;
+      rd_buf        <= rd;
+      csr_out_buf   <= csr_out;
+      alu_out_buf   <= alu_out;
+      gpr_wen_buf   <= gpr_wen;
+      csr_wen_buf   <= csr_wen;
+      csr_waddr_buf <= csr_waddr;
+      csr_wdata_buf <= csr_wdata;
+      is_ecall_buf  <= is_ecall;
+      is_mret_buf   <= is_mret;
+      wdata_exu_buf <= wdata_exu;
+
+      // mtime 读旁路
+      if (is_mtime && mem_ren) begin
         if      (alu_out == 32'h0200_0000) rdata_buf <= mtime[31:0];
         else if (alu_out == 32'h0200_0004) rdata_buf <= mtime[63:32];
         else                               rdata_buf <= 32'd0;
+      end
     end
-    // ==================================
+
+    // 一条指令在 WAIT_WBU 状态完成，对应的结果已经可以被 WBU 消费，下一拍回到 IDLE 后可接受新指令
+    if (lsu_valid && current_state == WAIT_WBU) begin
+      lsu_valid <= 1'b0;
+    end
   end
 end
 

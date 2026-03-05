@@ -62,59 +62,42 @@ wire is_mret;
 
 
 
-parameter IDLE       = 2'b00;
-parameter WAIT_READY = 2'b01;
+// IF/ID 流水寄存器 valid 标志
+reg id_valid;
 
+// 当本级为空或 EXU 在本拍准备好接收时，才允许 IFU 送入新指令
+wire id_can_accept = ~id_valid || ready_in_exu;
 
-reg [1:0] next_state;
-reg [1:0] current_state;
+assign ready_out_ifu = id_can_accept;
+assign valid_out_exu = id_valid;
 
-// state trans reg;
-Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
-
-// state change logic : next_state
-always@(*) begin
-  next_state = current_state;
-  case (current_state)
-    IDLE : begin
-      if(valid_in_ifu) begin
-        next_state = WAIT_READY;
-      end
+always @(posedge clk) begin
+  if (rst) begin
+    id_valid <= 1'b0;
+  end
+  else if (id_can_accept) begin
+    // 只有在可以接受的前提下才更新本级寄存器
+    id_valid <= valid_in_ifu;
+    if (valid_in_ifu) begin
+      pc_buf       <= pc;
+      rs1_buf      <= rs1;
+      rs2_buf      <= rs2;
+      rd_buf       <= rd;
+      imm_buf      <= imm;
+      gpr_wen_buf  <= gpr_wen;
+      func3_buf    <= func3;         
+      funcEU_buf   <= funcEU;       
+      amux1_buf    <= amux1;         
+      amux2_buf    <= amux2;         
+      opcode_buf   <= opcode;       
+      mem_ren_buf  <= mem_ren;         
+      mem_wen_buf  <= mem_wen;     
+      wmask_buf    <= wmask;         
+      csr_addr_buf <= csr_addr;    
+      csr_wen_buf  <= csr_wen;     
+      is_ecall_buf <= is_ecall;    
+      is_mret_buf  <= is_mret;     
     end
-    WAIT_READY : begin
-      if(ready_in_exu) begin
-        next_state = IDLE; 
-      end
-    end
-    default: 
-        next_state = IDLE; 
-  endcase
-end
-
-// output rely on specific state;
-assign ready_out_ifu = current_state === IDLE;
-assign valid_out_exu = current_state === WAIT_READY;
-
-always@(posedge clk) begin
-  if (current_state === IDLE && next_state === WAIT_READY) begin  // 状态恰好转移 将判断逻辑改为 valid_in_ifu && ready_out_ifu 会更直观
-    pc_buf <= pc;
-    rs1_buf <= rs1;
-    rs2_buf <= rs2;
-    rd_buf <= rd;
-    imm_buf <= imm;
-    gpr_wen_buf <= gpr_wen;
-    func3_buf <= func3;         
-    funcEU_buf <= funcEU;       
-    amux1_buf <= amux1;         
-    amux2_buf <= amux2;         
-    opcode_buf <= opcode;       
-    mem_ren_buf <= mem_ren;         
-    mem_wen_buf <= mem_wen;     
-    wmask_buf <= wmask;         
-    csr_addr_buf <= csr_addr;    
-    csr_wen_buf <= csr_wen;     
-    is_ecall_buf <= is_ecall;    
-    is_mret_buf <= is_mret;     
   end
 end
 

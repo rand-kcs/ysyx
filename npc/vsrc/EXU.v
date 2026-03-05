@@ -58,61 +58,43 @@ module EXU(
 wire [31:0] aluOut;
 wire [31:0] csr_wdata;
 
-parameter IDLE       = 2'b00;
-parameter WAIT_READY = 2'b01;
+// ID/EX 流水寄存器 valid 标志
+reg ex_valid;
 
-reg [1:0] next_state;
-reg [1:0] current_state;
+// 当本级为空或 LSU 在本拍准备好接收时，才允许 IDU 送入新指令
+wire ex_can_accept = ~ex_valid || ready_in_lsu;
 
-// state trans reg;
-Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
+assign ready_out_idu = ex_can_accept;
+assign valid_out_lsu = ex_valid;
 
-// state change logic : next_state
-always@(*) begin
-  next_state = current_state;
-  case (current_state)
-    IDLE : begin
-      if(valid_in_idu) begin
-        next_state = WAIT_READY;
-      end
+always @(posedge clk) begin
+  if (rst) begin
+    ex_valid <= 1'b0;
+  end
+  else if (ex_can_accept) begin
+    ex_valid <= valid_in_idu;
+    if (valid_in_idu) begin
+      ben_buf        <= ben;
+      aluOut_buf     <= aluOut;
+      csr_wdata_buf  <= csr_wdata;
+
+      // 传递控制和数据信号到 LSU/WBU
+      func3_buf      <= func3;
+      mem_ren_buf    <= mem_ren;
+      wdata_buf      <= src2;
+      wmask_buf      <= wmask;
+      mem_wen_buf    <= mem_wen;
+      is_ecall_buf   <= is_ecall;
+      is_mret_buf    <= is_mret;
+
+      gpr_wen_buf    <= gpr_wen;
+      rd_buf         <= rd;
+      pc_buf         <= pc;
+      opcode_buf     <= opcode;
+      csr_out_buf    <= csr_out;
+      csr_wen_buf    <= csr_wen;
+      csr_waddr_buf  <= csr_waddr;
     end
-    WAIT_READY : begin
-      if(ready_in_lsu) begin
-        next_state = IDLE; 
-      end
-    end
-    default: 
-        next_state = IDLE; 
-  endcase
-end
-
-// output rely on specific state;
-assign ready_out_idu = current_state === IDLE;
-assign valid_out_lsu = current_state === WAIT_READY;
-
-always@(posedge clk) begin
-  if (current_state === IDLE && next_state === WAIT_READY) begin  // 状态恰好转移
-    ben_buf <= ben;
-    aluOut_buf <= aluOut;
-    csr_wdata_buf <= csr_wdata;
-
-    // Pass 
-    func3_buf <= func3;
-    mem_ren_buf <= mem_ren;
-    wdata_buf <= src2;
-    wmask_buf <= wmask;
-    mem_wen_buf <= mem_wen;
-    is_ecall_buf <= is_ecall;
-    is_mret_buf <= is_mret;
-
-    ben_buf <= ben;
-    gpr_wen_buf <= gpr_wen;
-    rd_buf <= rd;
-    pc_buf <= pc;
-    opcode_buf <= opcode;
-    csr_out_buf <= csr_out;
-    csr_wen_buf <= csr_wen;
-    csr_waddr_buf <= csr_waddr;
   end
 end
 
