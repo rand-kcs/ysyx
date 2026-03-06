@@ -153,7 +153,21 @@ always@(*) begin
     end
 
     WAIT_WBU: begin
-      next_state = IDLE;
+      // 如果正在交接的当拍，EXU 发来了新的有效指令
+      if (valid_in_exu) begin
+        if(is_mtime)
+          next_state = WAIT_WBU;       // 新指令也是 mtime，继续停在 WAIT_WBU 形成流水
+        else if(mem_ren) 
+          next_state = WAIT_ARREADY;   // 新指令是读内存
+        else if(mem_wen)
+          next_state = WAIT_WAWREADY;  // 新指令是写内存
+        else 
+          next_state = WAIT_WBU;       // 新指令也是普通 ALU 指令
+      end 
+      // 如果 EXU 没有新指令，老老实实回到 IDLE
+      else begin
+        next_state = IDLE;
+      end
     end
 
     WAIT_WAWREADY: begin
@@ -180,9 +194,9 @@ reg lsu_valid;
 
 // ========== 3. 输出逻辑 ==========
 // ready/valid 语义：
-// - 仅当 LSU 处于 IDLE（当前没有待处理指令）时，对 EXU 拉高 ready_out_exu
 // - 当 LSU 内部已有一条指令且状态机到达 WAIT_WBU 时，对 WBU 拉高 valid_out_wbu
-assign ready_out_exu = (current_state == IDLE) && ~lsu_valid;
+// 只要是 IDLE 状态（空载），或者处于 WAIT_WBU 状态（正在向后级交接），都允许接收新指令
+assign ready_out_exu = (current_state == IDLE) || (current_state == WAIT_WBU);
 assign valid_out_wbu = lsu_valid && (current_state == WAIT_WBU);
 
 // AXI 信号仍然由状态机驱动
@@ -257,10 +271,9 @@ always@(posedge clk) begin
         else                               rdata_buf <= 32'd0;
       end
     end
-
     // 一条指令在 WAIT_WBU 状态完成，对应的结果已经可以被 WBU 消费，下一拍回到 IDLE 后可接受新指令
-    if (lsu_valid && current_state == WAIT_WBU) begin
-      lsu_valid <= 1'b0;
+    else if (current_state == WAIT_WBU) begin
+     lsu_valid <= 1'b0;
     end
   end
 end
