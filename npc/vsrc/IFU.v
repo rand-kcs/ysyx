@@ -1,13 +1,12 @@
-// each DONE sig stands for a inst done, except the fitst reset;
-// 实例化一个 IFU， 包括 PC 寄存器， 缓存， 通信信号， 与 mem 模块沟通
+// IFU：取指状态机、缓存、通信信号，与 mem 模块沟通
 module IFU (
   input clk,
   input rst,
 
-  input [31:0]  pc,           /// Communicate with PC_reg;
-  input done,
-  //output reg ready_out_pc,
-  
+  input [31:0] pc,           /// Communicate with PC_reg;
+  input [31:0] redirect_pc,
+  input flush,
+
   // AXI4-lite
   output reg [31:0] araddr,
   output arvalid,
@@ -20,69 +19,112 @@ module IFU (
   output rready,
 
   input ready_in_idu,         // Communicate with IDU;
-  output valid_out_idu,       // From IDU  
+  output valid_out_idu,       // To IDU
   output reg [31:0] pc_buf,
-  output reg [31:0] inst      // To IDU     
+  output reg [31:0] inst
 );
-
 
 parameter IDLE       = 2'b00;
 parameter WAIT_ADDR  = 2'b01;
 parameter WAIT_DATA  = 2'b10;
 parameter WAIT_IDU   = 2'b11;
 
-reg [1:0] next_state;
 reg [1:0] current_state;
+reg [1:0] next_state;
 
-// state trans reg;
-Reg #(2, IDLE) state(clk, rst, next_state, current_state, 1'b1);
+// 独立取指指针：默认顺序按 PC+4 前推
+reg [31:0] fetch_pc;
+// 本次请求对应的PC（用于回填给IDU）
+reg [31:0] req_pc;
+
+// IF/ID valid 标志（与 IDU/EXU 风格一致）
+reg if_valid;
+// flush 时如果有在途请求，则丢弃一次返回数据
+reg kill_resp;
 
 assign arsize = 3'b010;
+assign arvalid = (current_state == WAIT_ADDR);
+assign rready  = (current_state == WAIT_DATA);
+assign valid_out_idu = if_valid;
 
-
-// the state trans logic
-always@(*) begin
+always @(*) begin
   next_state = current_state;
   case (current_state)
-    IDLE : begin
-      if(done) begin
-        next_state = WAIT_ADDR;
+    IDLE: begin
+      next_state = WAIT_ADDR;
+    end
+    WAIT_ADDR: begin
+      if (arready) begin
+        next_state = WAIT_DATA;
       end
     end
-    WAIT_ADDR : begin
-      if(arready) begin
-        next_state = WAIT_DATA; 
+    WAIT_DATA: begin
+      if (rvalid) begin
+        if (kill_resp) begin
+          // 被 flush 杀掉的一次返回，直接回到 IDLE 重新取
+          next_state = IDLE;
+        end else begin
+          next_state = WAIT_IDU;
+        end
       end
     end
-    WAIT_DATA : begin
-      if(rvalid) begin
-        next_state = WAIT_IDU; 
+    WAIT_IDU: begin
+      if (ready_in_idu) begin
+        next_state = IDLE;
       end
     end
-    WAIT_IDU : begin
-      if(ready_in_idu) begin
-        next_state = IDLE; 
-      end
+    default: begin
+      next_state = IDLE;
     end
-    default: 
-        next_state = IDLE; 
   endcase
 end
 
-// output reley on state
-assign valid_out_idu  = current_state === WAIT_IDU ;
-assign arvalid = current_state === WAIT_ADDR;
-assign rready = current_state === WAIT_DATA;
+always @(posedge clk) begin
+  if (rst) begin
+    current_state <= IDLE;
+    araddr        <= 32'b0;
+    pc_buf        <= 32'b0;
+    inst          <= 32'b0;
+    fetch_pc      <= pc;
+    req_pc        <= 32'b0;
+    if_valid      <= 1'b0;
+    kill_resp     <= 1'b0;
+  end else begin
+    current_state <= next_state;
 
-always@(posedge clk) begin
-  if(current_state === IDLE && next_state === WAIT_ADDR) begin  // 等价于 状态恰好转移
-    pc_buf <= pc;
-    araddr <= pc;
-  end
-  else if(current_state === WAIT_DATA && next_state === WAIT_IDU) begin  // 等价于 状态恰好转移 握手成功
-    inst <= rdata;
+    // IFU 与其它流水段统一：flush 时仅清 valid；
+    // 同时独立恢复 fetch 指针到 redirect 目标。
+    if (flush) begin
+      if_valid <= 1'b0;
+      fetch_pc <= redirect_pc;
+      if (current_state == WAIT_ADDR || current_state == WAIT_DATA) begin
+        kill_resp <= 1'b1;
+      end
+    end
+
+    // 发起一次取指请求
+    if (current_state == IDLE && next_state == WAIT_ADDR) begin
+      araddr   <= fetch_pc;
+      req_pc   <= fetch_pc;
+      fetch_pc <= fetch_pc + 32'd4;
+    end
+
+    // 收到取指数据：若是被 flush 的在途返回则丢弃
+    if (current_state == WAIT_DATA && rvalid) begin
+      if (kill_resp) begin
+        kill_resp <= 1'b0;
+      end else begin
+        pc_buf   <= req_pc;
+        inst     <= rdata;
+        if_valid <= 1'b1;
+      end
+    end
+
+    // 被 IDU 消费后清 valid
+    if (if_valid && ready_in_idu) begin
+      if_valid <= 1'b0;
+    end
   end
 end
-
 
 endmodule

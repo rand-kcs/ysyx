@@ -220,6 +220,8 @@ wire [4:0] rd_wbu;
 wire [31:0] gpr_wdata_wbu;
 wire csr_wen_wbu;
 wire valid_wbu;
+wire redirect_valid_wbu;
+wire flush_pipeline;
 wire [11:0] csr_waddr_wbu;
 wire [31:0] csr_wdata_wbu;
 wire is_ecall_wbu;
@@ -232,6 +234,8 @@ wire [31:0] inst_ifu_idu;
 
 wire ready_idu_ifu, ready_exu_idu, ready_lsu_exu, ready_wbu_lsu;
 wire valid_ifu_idu, valid_idu_exu, valid_exu_lsu, valid_lsu_wbu;
+
+assign flush_pipeline = redirect_valid_wbu;
 
 PC_reg pc_reg(.clk(clk), .rst(rst), .valid_wbu(valid_wbu), .dnpc(dnpc), .pc(pc), .done(done));
 
@@ -290,10 +294,11 @@ IFU ifu(
   
   .ready_in_idu(ready_idu_ifu), 
   .valid_out_idu(valid_ifu_idu), 
+  .flush(flush_pipeline),
   
   // input
   .pc(pc), 
-  .done(done), 
+  .redirect_pc(dnpc),
   
   // output
   .pc_buf(pc_ifu_idu),
@@ -354,7 +359,8 @@ IDU idu(
   .csr_addr_buf(csr_waddr_idu),
   .csr_wen_buf(csr_wen_idu),
   .is_ecall_buf(is_ecall_idu),
-  .is_mret_buf(is_mret_idu)
+  .is_mret_buf(is_mret_idu),
+  .flush(flush_pipeline)
 );
 
 wire ben_exu;
@@ -430,7 +436,8 @@ EXU exu(
   .opcode_buf(opcode_exu),
  
   .aluOut_buf(aluOut_exu),
-  .csr_wdata_buf(csr_wdata_exu)
+  .csr_wdata_buf(csr_wdata_exu),
+  .flush(flush_pipeline)
 );
 
 wire ben_lsu;
@@ -684,7 +691,8 @@ WBU wbu(
   .csr_waddr_buf(csr_waddr_wbu),
   .csr_wdata_buf(csr_wdata_wbu),
 
-  .valid_out_wbu(valid_wbu)
+  .valid_out_wbu(valid_wbu),
+  .redirect_valid(redirect_valid_wbu)
 );
 
 // ==============================================

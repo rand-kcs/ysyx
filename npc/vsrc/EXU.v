@@ -52,7 +52,9 @@ module EXU(
 
   output reg ben_buf,
 	output reg [31:0] aluOut_buf,
-  output reg [31:0] csr_wdata_buf
+  output reg [31:0] csr_wdata_buf,
+
+  input flush
 );
 
 wire [31:0] aluOut;
@@ -69,6 +71,9 @@ assign valid_out_lsu = ex_valid;
 
 always @(posedge clk) begin
   if (rst) begin
+    ex_valid <= 1'b0;
+  end
+  else if (flush) begin
     ex_valid <= 1'b0;
   end
   else if (ex_can_accept) begin

@@ -37,7 +37,9 @@ module IDU (
   output reg [11:0] csr_addr_buf,
   output reg csr_wen_buf,
   output reg is_ecall_buf,
-  output reg is_mret_buf
+  output reg is_mret_buf,
+
+  input flush
 );
 
 wire [4:0] rs1;
@@ -73,6 +75,9 @@ assign valid_out_exu = id_valid;
 
 always @(posedge clk) begin
   if (rst) begin
+    id_valid <= 1'b0;
+  end
+  else if (flush) begin
     id_valid <= 1'b0;
   end
   else if (id_can_accept) begin
