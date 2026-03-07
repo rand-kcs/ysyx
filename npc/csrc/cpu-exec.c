@@ -50,10 +50,14 @@ static void trace() {
   
 }
 
+extern "C" void npc_error(){
+  npc_state.state = NPC_ABORT;
+}
+
 static void exec_once() {
   trace();
 	single_cycle();
-    while(!cpu_done()){
+    while(!cpu_done()  && npc_state.state == NPC_RUNNING){
      single_cycle();
     }
   //printf("One inst execute state: %x\n",cpu_done());

@@ -136,6 +136,7 @@ $dumpvars();
 end
 
 export "DPI-C" function ebreakYes;
+import "DPI-C" function void npc_error();
 
 function ebreakYes;
     ebreakYes = !|((inst_ifu_idu & 32'hfff0707f) ^ 32'h00100073);
@@ -192,7 +193,7 @@ endfunction
                     $display("\n[Error] Invalid Memory READ Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_araddr);
                     $display("        Valid Ranges: [0x20000000-0x20000fff] or [0x0f000000-0x0f001fff]");
-                    $fatal(1); // 终止仿真并返回错误码
+                    npc_error();
                 end
             end
 
@@ -204,7 +205,7 @@ endfunction
                     $display("\n[Error] Invalid Memory WRITE Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_awaddr);
                     $display("        Valid Range: [0x0f000000-0x0f001fff]");
-                    $fatal(1); // 终止仿真并返回错误码
+                    npc_error();
                 end
             end
         end
