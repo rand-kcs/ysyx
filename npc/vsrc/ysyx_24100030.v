@@ -612,63 +612,63 @@ ARBITER arbiter(
   .clk(clk),
   .rst(rst),
   
-  // 主设备0接口 (Master 0) - 分配给IFU
+  // 主设备0接口 (Master 0) - 分配给LSU，ARBITER内优先m0，实现LSU优先访存
   // 读地址通道
-  .m0_araddr(ifu_araddr),
-  .m0_arvalid(ifu_arvalid),
-  .m0_arready(ifu_arready),
-  .m0_arsize(ifu_arsize),
+  .m0_araddr(lsu_araddr),
+  .m0_arvalid(lsu_arvalid),
+  .m0_arready(lsu_arready),
+  .m0_arsize(lsu_arsize),
   
   // 读数据通道
-  .m0_rdata(ifu_rdata),
-  .m0_rresp(ifu_rresp),
-  .m0_rvalid(ifu_rvalid),
-  .m0_rready(ifu_rready),
-  
-  // 写地址通道 - IFU没有写操作
-  .m0_awaddr(32'b0),
-  .m0_awvalid(1'b0),
-  .m0_awready(),  // 悬空
-  
-  // 写数据通道 - IFU没有写操作
-  .m0_wdata(32'b0),
-  .m0_wstrb(4'b0),
-  .m0_wvalid(1'b0),
-  .m0_wready(),   // 悬空
-  
-  // 写响应通道 - IFU没有写操作
-  .m0_bresp(),    // 悬空
-  .m0_bvalid(),   // 悬空
-  .m0_bready(1'b0),
-  
-  // 主设备1接口 (Master 1) - 分配给LSU
-  // 读地址通道
-  .m1_araddr(lsu_araddr),
-  .m1_arvalid(lsu_arvalid),
-  .m1_arready(lsu_arready),
-  .m1_arsize(lsu_arsize),
-  
-  // 读数据通道
-  .m1_rdata(lsu_rdata),
-  .m1_rresp(lsu_rresp),
-  .m1_rvalid(lsu_rvalid),
-  .m1_rready(lsu_rready),
+  .m0_rdata(lsu_rdata),
+  .m0_rresp(lsu_rresp),
+  .m0_rvalid(lsu_rvalid),
+  .m0_rready(lsu_rready),
   
   // 写地址通道
-  .m1_awaddr(lsu_awaddr),
-  .m1_awvalid(lsu_awvalid),
-  .m1_awready(lsu_awready),
+  .m0_awaddr(lsu_awaddr),
+  .m0_awvalid(lsu_awvalid),
+  .m0_awready(lsu_awready),
   
   // 写数据通道
-  .m1_wdata(lsu_wdata),
-  .m1_wstrb(lsu_wstrb),
-  .m1_wvalid(lsu_wvalid),
-  .m1_wready(lsu_wready),
+  .m0_wdata(lsu_wdata),
+  .m0_wstrb(lsu_wstrb),
+  .m0_wvalid(lsu_wvalid),
+  .m0_wready(lsu_wready),
   
   // 写响应通道
-  .m1_bresp(lsu_bresp),
-  .m1_bvalid(lsu_bvalid),
-  .m1_bready(lsu_bready),
+  .m0_bresp(lsu_bresp),
+  .m0_bvalid(lsu_bvalid),
+  .m0_bready(lsu_bready),
+  
+  // 主设备1接口 (Master 1) - 分配给IFU
+  // 读地址通道
+  .m1_araddr(ifu_araddr),
+  .m1_arvalid(ifu_arvalid),
+  .m1_arready(ifu_arready),
+  .m1_arsize(ifu_arsize),
+  
+  // 读数据通道
+  .m1_rdata(ifu_rdata),
+  .m1_rresp(ifu_rresp),
+  .m1_rvalid(ifu_rvalid),
+  .m1_rready(ifu_rready),
+  
+  // 写地址通道 - IFU没有写操作
+  .m1_awaddr(32'b0),
+  .m1_awvalid(1'b0),
+  .m1_awready(),  // 悬空
+  
+  // 写数据通道 - IFU没有写操作
+  .m1_wdata(32'b0),
+  .m1_wstrb(4'b0),
+  .m1_wvalid(1'b0),
+  .m1_wready(),   // 悬空
+  
+  // 写响应通道 - IFU没有写操作
+  .m1_bresp(),    // 悬空
+  .m1_bvalid(),   // 悬空
+  .m1_bready(1'b0),
   
   // 从设备接口 (Slave) - 连接到AXI接口
   // 读地址通道
