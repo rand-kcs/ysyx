@@ -90,6 +90,7 @@ always @(posedge clk) begin
   else if (stall) begin
     // load-use stall: 冻结本级，仅保持 valid/payload
     id_valid <= id_valid;
+    $display("pc: %x, stalling", pc_buf);
   end
   else if (id_can_accept) begin
     // 只有在可以接受时才更新本级寄存器
