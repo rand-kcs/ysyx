@@ -198,7 +198,7 @@ reg lsu_valid;
 // ready/valid 语义：
 // - 仅当 LSU 处于 IDLE（当前没有待处理指令）时，对 EXU 拉高 ready_out_exu
 // - 当 LSU 内部已有一条指令且状态机到达 WAIT_WBU 时，对 WBU 拉高 valid_out_wbu
-assign ready_out_exu = (current_state == IDLE) && ~lsu_valid;
+assign ready_out_exu = (current_state == IDLE  || current_state == WAIT_WBU);
 assign valid_out_wbu = lsu_valid && (current_state == WAIT_WBU);
 assign lsu_valid_o = lsu_valid;
 assign lsu_pending_load = lsu_valid && lsu_is_load_buf && (current_state != WAIT_WBU);
@@ -325,6 +325,9 @@ end
                                   current_state == WAIT_AWREADY  || current_state == WAIT_BVALID);
 
   always @(posedge clk) begin
+`ifdef DEBUG_ON_DETAIL
+    $display("LSU Current State: : ", current_state);
+`endif
     if (rst) begin
       debug_mem_timer <= 32'd0;
     end else begin

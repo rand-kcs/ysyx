@@ -45,7 +45,7 @@ reg kill_resp;
 assign arsize = 3'b010;
 assign arvalid = (current_state == WAIT_ADDR);
 assign rready  = (current_state == WAIT_DATA);
-assign valid_out_idu = if_valid;
+assign valid_out_idu = if_valid && ~flush;
 
 always @(*) begin
   next_state = current_state;
@@ -84,6 +84,10 @@ reg [15:0] timer;
 `endif
 
 always @(posedge clk) begin
+`ifdef DEBUG_ON_DETAIL
+      $display("IFU Current State:",current_state);
+`endif
+
   if (rst) begin
     current_state <= IDLE;
     araddr        <= 32'b0;

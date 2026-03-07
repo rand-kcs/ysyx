@@ -67,9 +67,14 @@ reg ex_valid;
 wire ex_can_accept = ~ex_valid || ready_in_lsu;
 
 assign ready_out_idu = ex_can_accept;
-assign valid_out_lsu = ex_valid;
+assign valid_out_lsu = ex_valid && ~flush;
 
 always @(posedge clk) begin
+
+`ifdef DEBUG_ON_DETAIL
+    $display("EXU Current State: ex_valid: ", ex_valid);
+`endif
+
   if (rst) begin
     ex_valid <= 1'b0;
   end
@@ -99,7 +104,7 @@ always @(posedge clk) begin
       csr_out_buf    <= csr_out;
       csr_wen_buf    <= csr_wen;
       csr_waddr_buf  <= csr_waddr;
-    end
+    end 
   end
 end
 

@@ -76,11 +76,15 @@ reg id_valid;
 // 当本级为空或 EXU 在本拍准备好接收时，才允许 IFU 送入新指令
 wire id_can_accept = ~id_valid || ready_in_exu;
 
-assign ready_out_ifu = id_can_accept && ~stall;
+assign ready_out_ifu = id_can_accept && ~stall && ~flush;
 assign valid_out_exu = id_valid && ~stall;
 assign valid_raw     = id_valid;
 
 always @(posedge clk) begin
+`ifdef DEBUG_ON_DETAIL
+    $display("IDU Current State: id_valid:", id_valid);
+`endif
+
   if (rst) begin
     id_valid <= 1'b0;
   end
@@ -90,7 +94,9 @@ always @(posedge clk) begin
   else if (stall) begin
     // load-use stall: 冻结本级，仅保持 valid/payload
     id_valid <= id_valid;
+`ifdef DEBUG_ON
     $display("pc: %x, stalling", pc_buf);
+`endif
   end
   else if (id_can_accept) begin
     // 只有在可以接受时才更新本级寄存器
