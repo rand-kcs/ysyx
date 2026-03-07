@@ -79,6 +79,10 @@ always @(*) begin
   endcase
 end
 
+`ifdef DEBUG_ON
+reg [15:0] timer;
+`endif
+
 always @(posedge clk) begin
   if (rst) begin
     current_state <= IDLE;
@@ -107,6 +111,9 @@ always @(posedge clk) begin
       araddr   <= fetch_pc;
       req_pc   <= fetch_pc;
       fetch_pc <= fetch_pc + 32'd4;
+`ifdef DEBUG_ON
+      timer <= 16'd0;
+`endif
     end
 
     // 收到取指数据：若是被 flush 的在途返回则丢弃
@@ -117,8 +124,17 @@ always @(posedge clk) begin
         pc_buf   <= req_pc;
         inst     <= rdata;
         if_valid <= 1'b1;
+`ifdef DEBUG_ON
+        $display("fetch pc:%x, took %d cycles", req_pc, timer);
+`endif
       end
     end
+
+`ifdef DEBUG_ON
+    if (current_state == WAIT_ADDR || current_state == WAIT_DATA) begin
+      timer <= timer + 16'd1;
+    end
+`endif
 
     // 被 IDU 消费后清 valid
     if (if_valid && ready_in_idu) begin
