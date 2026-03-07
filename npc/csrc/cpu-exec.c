@@ -57,9 +57,12 @@ extern "C" void npc_error(){
 static void exec_once() {
   trace();
 	single_cycle();
+  int cnt = 1;
     while(!cpu_done()  && npc_state.state == NPC_RUNNING){
      single_cycle();
+    cnt++;
     }
+  printf("execute for %d cycles\n", cnt);
   //printf("One inst execute state: %x\n",cpu_done());
   //print_reg_status();
 
