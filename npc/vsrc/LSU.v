@@ -317,4 +317,31 @@ always @(posedge clk) begin
     bresp_out <= bresp;
 end
 
+// ========== DEBUG_ON：访存性能计数器，仿照 IFU 用 $display 输出 ==========
+`ifdef DEBUG_ON
+  reg [31:0] debug_mem_timer;
+  wire       load_in_progress   = (current_state == WAIT_ARREADY || current_state == WAIT_RVALID);
+  wire       store_in_progress  = (current_state == WAIT_WAWREADY || current_state == WAIT_WREADY ||
+                                  current_state == WAIT_AWREADY  || current_state == WAIT_BVALID);
+
+  always @(posedge clk) begin
+    if (rst) begin
+      debug_mem_timer <= 32'd0;
+    end else begin
+      if (current_state == IDLE) begin
+        if (next_state == WAIT_ARREADY || next_state == WAIT_WAWREADY)
+          debug_mem_timer <= 32'd0;
+      end else if (load_in_progress) begin
+        debug_mem_timer <= debug_mem_timer + 32'd1;
+        if (rvalid && rready && rresp == 2'b00)
+          $display("lsu load addr:%x, took %d cycles", araddr, debug_mem_timer + 32'd1);
+      end else if (store_in_progress) begin
+        debug_mem_timer <= debug_mem_timer + 32'd1;
+        if (bvalid && bready && bresp == 2'b00)
+          $display("lsu store addr:%x, took %d cycles", awaddr, debug_mem_timer + 32'd1);
+      end
+    end
+  end
+`endif
+
 endmodule
