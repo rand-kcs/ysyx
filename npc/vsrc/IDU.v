@@ -15,6 +15,7 @@ module IDU (
   output ready_out_ifu,
 
   output valid_out_exu,
+  output valid_raw,
   input ready_in_exu,
 
   input [31:0] pc,
@@ -38,8 +39,11 @@ module IDU (
   output reg csr_wen_buf,
   output reg is_ecall_buf,
   output reg is_mret_buf,
+  output reg use_rs1_buf,
+  output reg use_rs2_buf,
 
-  input flush
+  input flush,
+  input stall
 );
 
 wire [4:0] rs1;
@@ -60,6 +64,8 @@ wire [11:0] csr_addr;
 wire csr_wen;
 wire is_ecall;
 wire is_mret;
+wire use_rs1;
+wire use_rs2;
 
 
 
@@ -70,8 +76,9 @@ reg id_valid;
 // 当本级为空或 EXU 在本拍准备好接收时，才允许 IFU 送入新指令
 wire id_can_accept = ~id_valid || ready_in_exu;
 
-assign ready_out_ifu = id_can_accept;
-assign valid_out_exu = id_valid;
+assign ready_out_ifu = id_can_accept && ~stall;
+assign valid_out_exu = id_valid && ~stall;
+assign valid_raw     = id_valid;
 
 always @(posedge clk) begin
   if (rst) begin
@@ -80,8 +87,12 @@ always @(posedge clk) begin
   else if (flush) begin
     id_valid <= 1'b0;
   end
+  else if (stall) begin
+    // load-use stall: 冻结本级，仅保持 valid/payload
+    id_valid <= id_valid;
+  end
   else if (id_can_accept) begin
-    // 只有在可以接受的前提下才更新本级寄存器
+    // 只有在可以接受时才更新本级寄存器
     id_valid <= valid_in_ifu;
     if (valid_in_ifu) begin
       pc_buf       <= pc;
@@ -102,6 +113,8 @@ always @(posedge clk) begin
       csr_wen_buf  <= csr_wen;     
       is_ecall_buf <= is_ecall;    
       is_mret_buf  <= is_mret;     
+      use_rs1_buf  <= use_rs1;
+      use_rs2_buf  <= use_rs2;
     end
   end
 end
@@ -138,6 +151,12 @@ assign csr_wen = opcode === 7'b1110011 ;
 assign is_ecall = inst === 32'h00000073;
 assign is_mret = inst === 32'h30200073 ;
 
+// rs1被使用：R型(算术), I型(算术, Load, JALR, CSR), S型(Store), B型(Branch)
+assign use_rs1 = (itype == `R_TYPE) || (itype == `I_TYPE) || 
+                 (itype == `S_TYPE) || (itype == `B_TYPE);
+
+// rs2被使用：R型(算术), S型(Store), B型(Branch)
+assign use_rs2 = (itype == `R_TYPE) || (itype == `S_TYPE) || (itype == `B_TYPE);
 
 // Make Immgen
 ImmGenerator immG(itype, inst, imm);

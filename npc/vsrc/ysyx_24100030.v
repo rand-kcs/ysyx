@@ -234,6 +234,7 @@ wire [31:0] inst_ifu_idu;
 
 wire ready_idu_ifu, ready_exu_idu, ready_lsu_exu, ready_wbu_lsu;
 wire valid_ifu_idu, valid_idu_exu, valid_exu_lsu, valid_lsu_wbu;
+wire valid_idu_raw;
 
 assign flush_pipeline = redirect_valid_wbu;
 
@@ -241,6 +242,7 @@ PC_reg pc_reg(.clk(clk), .rst(rst), .valid_wbu(valid_wbu), .dnpc(dnpc), .pc(pc),
 
 wire [4:0] rs1_idu, rs2_idu, rd_idu_exu;
 wire [31:0] src1_gpr, src2_gpr;
+wire [31:0] src1_exu_in, src2_exu_in;
 wire [31:0] csr_out_idu;
 
 RegisterFile #(5, 32) gprs(.clk(clk), .wdata(gpr_wdata_wbu),  .valid_wbu(valid_wbu),
@@ -326,6 +328,36 @@ wire [11:0] csr_waddr_idu;
 wire csr_wen_idu;
 wire is_ecall_idu;
 wire is_mret_idu;
+wire use_rs1_idu;
+wire use_rs2_idu;
+
+wire lsu_valid_o;
+wire lsu_pending_load;
+wire load_use_hazard;
+wire wait_lsu_load_hazard;
+wire bypass_stall;
+
+wire exu_forward_hit_rs1 = valid_idu_raw && use_rs1_idu && valid_exu_lsu && gpr_wen_exu && (rd_exu != 5'b0) && (rs1_idu == rd_exu);
+wire exu_forward_hit_rs2 = valid_idu_raw && use_rs2_idu && valid_exu_lsu && gpr_wen_exu && (rd_exu != 5'b0) && (rs2_idu == rd_exu);
+wire lsu_forward_hit_rs1 = valid_idu_raw && use_rs1_idu && lsu_valid_o && gpr_wen_lsu && (rd_lsu != 5'b0) && (rs1_idu == rd_lsu);
+wire lsu_forward_hit_rs2 = valid_idu_raw && use_rs2_idu && lsu_valid_o && gpr_wen_lsu && (rd_lsu != 5'b0) && (rs2_idu == rd_lsu);
+
+// EXU 是 load 时，结果尚不可旁路，必须停顿
+// EXU 上的load-use stall
+assign load_use_hazard = valid_idu_raw && valid_exu_lsu && mem_ren_exu && (rd_exu != 5'b0) &&
+                         ((use_rs1_idu && (rs1_idu == rd_exu)) || (use_rs2_idu && (rs2_idu == rd_exu)));
+// LSU上的
+// LSU 阶段若是等待总线返回的 load，命中依赖时继续等待
+assign wait_lsu_load_hazard = valid_idu_raw && lsu_pending_load && (rd_lsu != 5'b0) &&
+                              ((use_rs1_idu && (rs1_idu == rd_lsu)) || (use_rs2_idu && (rs2_idu == rd_lsu)));
+
+assign bypass_stall = load_use_hazard || wait_lsu_load_hazard;
+
+wire lsu_is_load = (opcode_lsu == 7'b0000011);
+assign src1_exu_in = exu_forward_hit_rs1 ? aluOut_exu :
+                     (lsu_forward_hit_rs1 ? (lsu_is_load ? rdata_w_lsu : alu_out_lsu) : src1_gpr);
+assign src2_exu_in = exu_forward_hit_rs2 ? aluOut_exu :
+                     (lsu_forward_hit_rs2 ? (lsu_is_load ? rdata_w_lsu : alu_out_lsu) : src2_gpr);
 
 IDU idu(
   .clk(clk), 
@@ -333,6 +365,7 @@ IDU idu(
 
   .ready_in_exu(ready_exu_idu), 
   .valid_out_exu(valid_idu_exu), 
+  .valid_raw(valid_idu_raw),
 
   .valid_in_ifu(valid_ifu_idu), 
   .ready_out_ifu(ready_idu_ifu), 
@@ -360,7 +393,10 @@ IDU idu(
   .csr_wen_buf(csr_wen_idu),
   .is_ecall_buf(is_ecall_idu),
   .is_mret_buf(is_mret_idu),
-  .flush(flush_pipeline)
+  .use_rs1_buf(use_rs1_idu),
+  .use_rs2_buf(use_rs2_idu),
+  .flush(flush_pipeline),
+  .stall(bypass_stall)
 );
 
 wire ben_exu;
@@ -404,8 +440,8 @@ EXU exu(
   .is_ecall(is_ecall_idu),
   .is_mret(is_mret_idu),
 
-  .src1(src1_gpr), 
-  .src2(src2_gpr),
+  .src1(src1_exu_in), 
+  .src2(src2_exu_in),
   .csr_out(csr_out_idu),
 
   .wmask(wmask_idu),
@@ -545,7 +581,9 @@ LSU lsu(
   .alu_out_buf(alu_out_lsu),
 
   .rresp_out(),
-  .bresp_out()
+  .bresp_out(),
+  .lsu_valid_o(lsu_valid_o),
+  .lsu_pending_load(lsu_pending_load)
 );
 
 // ========== ARBITER到顶层AXI接口的连接信号 ==========
