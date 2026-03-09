@@ -1,150 +1,200 @@
-// IFU：取指状态机、缓存、通信信号，与 mem 模块沟通
+// IFU：高性能取指单元，一段式状态机实现，带宏定义的取指延迟打印
 module IFU (
-  input clk,
-  input rst,
+  input  wire clk,
+  input  wire rst,
 
-  input [31:0] pc,           /// Communicate with PC_reg;
-  input [31:0] redirect_pc,
-  input flush,
+  input  wire [31:0] pc,            
+  input  wire [31:0] redirect_pc,   
+  input  wire flush,
 
   // AXI4-lite
-  output reg [31:0] araddr,
-  output arvalid,
-  input arready,
-  output [2:0] arsize,
+  output wire [31:0] araddr,
+  output wire arvalid,
+  input  wire arready,
+  output wire [2:0]  arsize,
 
-  input [31:0] rdata,
-  input [1:0] rresp,
-  input rvalid,
-  output rready,
+  input  wire [31:0] rdata,
+  input  wire [1:0]  rresp,
+  input  wire rvalid,
+  output wire rready,
 
-  input ready_in_idu,         // Communicate with IDU;
-  output valid_out_idu,       // To IDU
-  output reg [31:0] pc_buf,
-  output reg [31:0] inst
+  input  wire ready_in_idu,        
+  output wire valid_out_idu,       
+  output reg  [31:0] pc_buf,
+  output reg  [31:0] inst
 );
 
-parameter IDLE       = 2'b00;
-parameter WAIT_ADDR  = 2'b01;
-parameter WAIT_DATA  = 2'b10;
-parameter WAIT_IDU   = 2'b11;
+// ========== 状态定义 ==========
+localparam [1:0] WAIT_ADDR = 2'b00,
+                 WAIT_DATA = 2'b01,
+                 WAIT_IDU  = 2'b10;
 
-reg [1:0] current_state;
-reg [1:0] next_state;
+reg [1:0] state; 
 
-// 独立取指指针：默认顺序按 PC+4 前推
+// 独立取指指针与缓存
 reg [31:0] fetch_pc;
-// 本次请求对应的PC（用于回填给IDU）
 reg [31:0] req_pc;
+reg [31:0] araddr_reg;
 
-// IF/ID valid 标志（与 IDU/EXU 风格一致）
 reg if_valid;
-// flush 时如果有在途请求，则丢弃一次返回数据
 reg kill_resp;
 
-assign arsize = 3'b010;
-assign arvalid = (current_state == WAIT_ADDR);
-assign rready  = (current_state == WAIT_DATA);
+`ifdef DEBUG_ON
+// 【计时器】：内部累加器，仅在 DEBUG_ON 时编译
+reg [31:0] timer;
+`endif
+
+// ========== 静态信号输出 ==========
+assign arsize  = 3'b010; 
+assign araddr  = araddr_reg;
+assign arvalid = (state == WAIT_ADDR) && ~rst;
+assign rready  = (state == WAIT_DATA);
+
+// 对外接口信号
 assign valid_out_idu = if_valid && ~flush;
 
-always @(*) begin
-  next_state = current_state;
-  case (current_state)
-    IDLE: begin
-      next_state = WAIT_ADDR;
-    end
-    WAIT_ADDR: begin
-      if (arready) begin
-        next_state = WAIT_DATA;
-      end
-    end
-    WAIT_DATA: begin
-      if (rvalid) begin
-        if (kill_resp) begin
-          // 被 flush 杀掉的一次返回，直接回到 IDLE 重新取
-          next_state = IDLE;
-        end else begin
-          next_state = WAIT_IDU;
+// ========== 核心控制逻辑 (一段式状态机) ==========
+always @(posedge clk) begin
+  if (rst) begin
+    state        <= WAIT_ADDR;
+    araddr_reg   <= pc;
+    req_pc       <= pc;
+    fetch_pc     <= pc + 32'd4;
+    pc_buf       <= 32'b0;
+    inst         <= 32'b0;
+    if_valid     <= 1'b0;
+    kill_resp    <= 1'b0;
+    
+`ifdef DEBUG_ON
+    timer        <= 32'd0;
+`endif
+  end 
+  else begin
+    // -----------------------------------------------------------------
+    // 分支 1：最高优先级处理 Flush 冲刷
+    // -----------------------------------------------------------------
+    if (flush) begin
+      if_valid <= 1'b0; 
+      
+      if (state == WAIT_IDU) begin
+        // 总线空闲，直接切换地址并发起新请求
+        state      <= WAIT_ADDR;
+        araddr_reg <= redirect_pc;
+        req_pc     <= redirect_pc;
+        fetch_pc   <= redirect_pc + 32'd4;
+        kill_resp  <= 1'b0;
+        
+`ifdef DEBUG_ON
+        timer      <= 32'd0; // 发起了新请求，重新开始计时
+`endif
+      end 
+      else begin
+        // 总线正忙，只能先存下目标 PC
+        fetch_pc <= redirect_pc; 
+        
+        // 如果正好此时废弃数据回来了，下一拍可以直接发新请求
+        if (state == WAIT_DATA && rvalid) begin
+          kill_resp  <= 1'b0;
+          state      <= WAIT_ADDR;
+          araddr_reg <= redirect_pc; 
+          req_pc     <= redirect_pc;
+          fetch_pc   <= redirect_pc + 32'd4;
+          
+`ifdef DEBUG_ON
+          timer      <= 32'd0; // 发起了新请求，重新开始计时
+`endif
+        end 
+
+         else if (state == WAIT_ADDR && arready) begin
+          state     <= WAIT_DATA; // 握手已发生，必须跳到 WAIT_DATA 等待数据返回
+          kill_resp <= 1'b1;      // 标记即将返回的数据为废弃数据
+`ifdef DEBUG_ON
+          timer     <= timer + 32'd1; // 废弃请求仍在路上，维持计时器运转
+`endif
+        end
+
+        else begin
+          kill_resp <= 1'b1; 
+`ifdef DEBUG_ON
+          timer     <= timer + 32'd1; // 废弃请求仍在路上，维持计时器运转
+`endif
         end
       end
-    end
-    WAIT_IDU: begin
-      if (ready_in_idu) begin
-        next_state = IDLE;
+    end 
+    // -----------------------------------------------------------------
+    // 分支 2：正常状态流转与数据通路
+    // -----------------------------------------------------------------
+    else begin
+      // A. 下游握手成功，清空当前阶段的有效位
+      if (valid_out_idu && ready_in_idu) begin
+        if_valid <= 1'b0;
       end
-    end
-    default: begin
-      next_state = IDLE;
-    end
-  endcase
-end
 
+      // B. 状态机流转
+      case (state)
+        WAIT_ADDR: begin
 `ifdef DEBUG_ON
-reg [15:0] timer;
+          timer <= timer + 32'd1; // 等待地址握手，累加
 `endif
-
-always @(posedge clk) begin
-`ifdef DEBUG_ON_DETAIL
-      $display("IFU Current State:",current_state);
-`endif
-
-  if (rst) begin
-    current_state <= IDLE;
-    araddr        <= 32'b0;
-    pc_buf        <= 32'b0;
-    inst          <= 32'b0;
-    fetch_pc      <= pc;
-    req_pc        <= 32'b0;
-    if_valid      <= 1'b0;
-    kill_resp     <= 1'b0;
-  end else begin
-    current_state <= next_state;
-
-    // IFU 与其它流水段统一：flush 时仅清 valid；
-    // 同时独立恢复 fetch 指针到 redirect 目标。
-    if (flush) begin
-      if_valid <= 1'b0;
-      fetch_pc <= redirect_pc;
-      if (current_state == WAIT_ADDR || current_state == WAIT_DATA) begin
-        kill_resp <= 1'b1;
-      end
-    end
-
-    // 发起一次取指请求
-    if (current_state == IDLE && next_state == WAIT_ADDR) begin
-      araddr   <= fetch_pc;
-      req_pc   <= fetch_pc;
-      fetch_pc <= fetch_pc + 32'd4;
+          if (arready) begin
+            state <= WAIT_DATA;
+          end
+        end
+        
+        WAIT_DATA: begin
+          if (rvalid) begin
+            if (kill_resp) begin
+              // 废弃数据返回：丢掉它，立刻去取缓存的新地址
+              kill_resp  <= 1'b0;
+              state      <= WAIT_ADDR;
+              araddr_reg <= fetch_pc;
+              req_pc     <= fetch_pc;
+              fetch_pc   <= fetch_pc + 32'd4;
+              
 `ifdef DEBUG_ON
-      timer <= 16'd0;
+              timer      <= 32'd0; // 抛弃旧请求，发出新请求，清零！
 `endif
-    end
-
-    // 收到取指数据：若是被 flush 的在途返回则丢弃
-    if (current_state == WAIT_DATA && rvalid) begin
-      if (kill_resp) begin
-        kill_resp <= 1'b0;
-      end else begin
-        pc_buf   <= req_pc;
-        inst     <= rdata;
-        if_valid <= 1'b1;
+            end 
+            else begin
+              // 有效数据返回：锁存数据，进入等待 IDU 接收状态
+              pc_buf       <= req_pc;
+              inst         <= rdata;
+              if_valid     <= 1'b1;
+              state        <= WAIT_IDU;
+              
 `ifdef DEBUG_ON
-        $display("fetch pc:%x, took %d cycles", req_pc, timer);
+              // 成功拿到指令！当前 timer 值加上这一拍，就是总延迟
+              $display("[IFU Timer] Fetch PC: 0x%08x | Cycles taken: %0d", req_pc, timer + 32'd1);
 `endif
-      end
-    end
-
+            end
+          end 
+          else begin
 `ifdef DEBUG_ON
-    if (current_state == WAIT_ADDR || current_state == WAIT_DATA) begin
-      timer <= timer + 16'd1;
-    end
+            timer <= timer + 32'd1; // 等待数据返回，累加
 `endif
-
-    // 被 IDU 消费后清 valid
-    if (if_valid && ready_in_idu) begin
-      if_valid <= 1'b0;
+          end
+        end
+        
+        WAIT_IDU: begin
+          // 数据已被接收：立刻切回 WAIT_ADDR，发起下一次取指
+          if (ready_in_idu) begin
+            state      <= WAIT_ADDR;
+            araddr_reg <= fetch_pc;
+            req_pc     <= fetch_pc;
+            fetch_pc   <= fetch_pc + 32'd4;
+            
+`ifdef DEBUG_ON
+            timer      <= 32'd0; // 发出下一条指令取指请求，清零！
+`endif
+          end
+        end
+      endcase
     end
   end
 end
+/*
+always@(posedge clk)
+  $display("IFU CURRENT state: %x arready: %x, flush %x, arvalid %x", state, arready, flush, arvalid);
+*/
 
 endmodule
