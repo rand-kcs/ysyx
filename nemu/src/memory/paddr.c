@@ -28,6 +28,10 @@
 #define CONFIG_AM_PSRAM_BASE 0x80000000
 #define CONFIG_AM_PSRAM_SIZE 0x20000000
 
+
+#define CONFIG_AM_SDRAM_BASE 0xa0000000
+#define CONFIG_AM_SDRAM_END  0xbfffffff
+
 #if   defined(CONFIG_PMEM_MALLOC)
 static uint8_t *pmem = NULL;
 #else // CONFIG_PMEM_GARRAY
@@ -38,9 +42,11 @@ static uint8_t pmem[CONFIG_MSIZE] PG_ALIGN = {};
 #ifdef CONFIG_AM_SRAM
 uint8_t *sram;
 uint8_t *psram;
+uint8_t *sdram;
 
 bool in_sram(paddr_t addr){ return addr >= CONFIG_AM_SRAM_BASE && addr < CONFIG_AM_SRAM_BASE + CONFIG_AM_SRAM_SIZE; }
 bool in_psram(paddr_t addr){ return addr >= CONFIG_AM_PSRAM_BASE && addr < CONFIG_AM_PSRAM_BASE + CONFIG_AM_PSRAM_SIZE; }
+bool in_sdram(paddr_t addr){ return addr >= CONFIG_AM_SDRAM_BASE && addr < CONFIG_AM_SDRAM_END ; }
 
 static word_t sram_read(paddr_t addr, int len) {
 #ifdef CONFIG_MTRACE
@@ -70,6 +76,21 @@ static void psram_write(paddr_t addr, int len, word_t data) {
 #endif
   host_write(psram + addr - CONFIG_AM_PSRAM_BASE, len, data);
 }
+
+static word_t sdram_read(paddr_t addr, int len) {
+#ifdef CONFIG_MTRACE
+	log_write("mem reading addr: " FMT_WORD " with len: %d\n", addr, len);
+#endif
+  word_t ret = host_read(sdram + addr - CONFIG_AM_SDRAM_BASE, len);
+  return ret;
+}
+static void sdram_write(paddr_t addr, int len, word_t data) {
+#ifdef CONFIG_MTRACE
+	log_write("sdram writing addr: " FMT_WORD " with len: %d, wdata: " FMT_WORD " \n", addr, len, data);
+#endif
+  host_write(sdram + addr - CONFIG_AM_SDRAM_BASE, len, data);
+}
+
 
 #endif
 
@@ -108,6 +129,10 @@ void init_mem() {
 
   psram = malloc(CONFIG_AM_PSRAM_SIZE);
   assert(psram);
+
+
+  sdram = malloc(CONFIG_AM_SDRAM_END - CONFIG_AM_SDRAM_BASE);
+  assert(sdram);
 #endif
 
   IFDEF(CONFIG_MEM_RANDOM, memset(pmem, rand(), CONFIG_MSIZE));
@@ -120,6 +145,7 @@ word_t paddr_read(paddr_t addr, int len) {
 #ifdef CONFIG_AM_SRAM
   if (likely(in_sram(addr))) return sram_read(addr, len);
   if (likely(in_psram(addr))) return psram_read(addr, len);
+  if (likely(in_sdram(addr))) return sdram_read(addr, len);
 #endif
   IFDEF(CONFIG_DEVICE, return mmio_read(addr, len));
   out_of_bound(addr);
@@ -134,6 +160,7 @@ void paddr_write(paddr_t addr, int len, word_t data) {
   // SRAM 0x0f00 0000 0x0f00 1fff
   if (likely(in_sram(addr))) { sram_write(addr, len, data); return; }
   if (likely(in_psram(addr))) { psram_write(addr, len, data); return; }
+  if (likely(in_sdram(addr))) { sdram_write(addr, len, data); return; }
   // SERIAL DEVIECE OUTPUT
   // skip difftest
   if(addr >= 0x10000000 && addr <= 0x10000007) return;
