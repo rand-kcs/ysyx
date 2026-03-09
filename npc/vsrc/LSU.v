@@ -204,10 +204,9 @@ reg lsu_valid;
 
 // ========== 3. 输出逻辑 ==========
 // ready/valid 语义：
-// - 仅当 LSU 处于 IDLE（当前没有待处理指令）时，对 EXU 拉高 ready_out_exu
-// - 当 LSU 内部已有一条指令且状态机到达 WAIT_WBU 时，对 WBU 拉高 valid_out_wbu
 assign ready_out_exu = (current_state == IDLE  || current_state == WAIT_WBU);
 assign valid_out_wbu = lsu_valid && (current_state == WAIT_WBU);
+// lsu_valid = LSU have something valid but not all such as rdata
 assign lsu_valid_o = lsu_valid;
 assign lsu_pending_load = lsu_valid && lsu_is_load_buf && (current_state != WAIT_WBU);
 
@@ -299,6 +298,7 @@ always@(posedge clk) begin
       end
     end
     // 一条指令在 WAIT_WBU 状态完成，对应的结果已经可以被 WBU 消费，下一拍回到 IDLE 后可接受新指令
+    // Not EXU LSU HANDSHAKE
     else if (current_state == WAIT_WBU) begin
      lsu_valid <= 1'b0;
      lsu_is_load_buf <= 1'b0;
