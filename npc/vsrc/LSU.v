@@ -181,6 +181,14 @@ always@(*) begin
         next_state = WAIT_AWREADY;
     end
 
+    WAIT_WREADY: begin
+      if(wready) next_state = WAIT_BVALID;
+    end
+
+    WAIT_AWREADY: begin
+      if(awready) next_state = WAIT_BVALID;
+    end
+
     WAIT_BVALID:
       if(bvalid)
         next_state = WAIT_WBU;
@@ -226,6 +234,14 @@ always @(*) begin
         wvalid  = 1'b1;
       end
 
+      WAIT_WREADY: begin
+      wvalid = 1'b1;  // AW 已经握手，只维持 WVALID
+      end
+
+      WAIT_AWREADY: begin
+        awvalid = 1'b1; // W 已经握手，只维持 AWVALID
+      end
+
       WAIT_BVALID: begin
         bready = 1'b1;
       end
@@ -242,6 +258,7 @@ end
 
 
 reg [31:0] wdata_exu_buf;
+reg [2:0] func3_buf;
 reg lsu_is_load_buf;
 
 // 接收来自 EXU 的请求，并在 WAIT_WBU 后清除 lsu_valid
@@ -271,6 +288,9 @@ always@(posedge clk) begin
       wdata_exu_buf <= wdata_exu;
       lsu_is_load_buf <= mem_ren;
 
+      //later use
+      func3_buf <= func3;
+
       // mtime 读旁路
       if (is_mtime && mem_ren) begin
         if      (alu_out == 32'h0200_0000) rdata_buf <= mtime[31:0];
@@ -290,7 +310,7 @@ assign araddr = alu_out_buf;
 assign awaddr = alu_out_buf;
 
 always @(*) begin
-  case (func3)
+  case (func3_buf)
     3'b000: arsize = 3'b000 ;// LB
     3'b001: arsize = 3'b001 ;// LH
     3'b010: arsize = 3'b010 ;                        // LW
@@ -302,9 +322,9 @@ end
 
 // rdata_w stands for treated after origin rdata from DRAM
 wire [31:0] rdata_w;
-RDATA_Processor rdata_processor(rdata, func3, alu_out_buf[1:0], araddr, rdata_w);
+RDATA_Processor rdata_processor(rdata, func3_buf, alu_out_buf[1:0], araddr, rdata_w);
 
-WDATA_Processor wdata_processor(.wdata_origin(wdata_exu_buf), .func3(func3), .addr_offset(alu_out_buf[1:0]), .wdata(wdata), .wstrb(wstrb));
+WDATA_Processor wdata_processor(.wdata_origin(wdata_exu_buf), .func3(func3_buf), .addr_offset(alu_out_buf[1:0]), .wdata(wdata), .wstrb(wstrb));
 
 always @(posedge clk) begin
   // 这里的 AXI 返回逻辑不动。对于 mtime 访问，rvalid 永远为低，不会覆盖 rdata_buf
