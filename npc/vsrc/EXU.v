@@ -56,7 +56,7 @@ module EXU(
 
   output reg ben_buf,
 	output reg [31:0] aluOut_buf,
-  output reg [31:0] csr_wdata_buf,
+  output reg [31:0] csr_wdata_buf
 
 );
 
