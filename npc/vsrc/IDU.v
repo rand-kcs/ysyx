@@ -77,7 +77,7 @@ reg id_valid;
 wire id_can_accept = ~id_valid || ready_in_exu;
 
 assign ready_out_ifu = id_can_accept && ~stall && ~flush;
-assign valid_out_exu = id_valid && ~stall;
+assign valid_out_exu = id_valid && ~stall &&~flush;
 assign valid_raw     = id_valid;
 
 always @(posedge clk) begin
