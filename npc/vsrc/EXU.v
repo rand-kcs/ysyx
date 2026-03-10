@@ -8,6 +8,10 @@ module EXU(
   output valid_out_lsu,
   input ready_in_lsu,
 
+  // EXU/LSU 级提前产生的 redirect 信息（用于静态预测 pc+4 的纠正）
+  output wire redirect_valid,
+  output wire [31:0] redirect_pc,
+
   // EXU 本来 要用的
   input [2:0] func3,
   input [6:0] opcode,
@@ -54,7 +58,6 @@ module EXU(
 	output reg [31:0] aluOut_buf,
   output reg [31:0] csr_wdata_buf,
 
-  input flush
 );
 
 wire [31:0] aluOut;
@@ -67,7 +70,29 @@ reg ex_valid;
 wire ex_can_accept = ~ex_valid || ready_in_lsu;
 
 assign ready_out_idu = ex_can_accept;
-assign valid_out_lsu = ex_valid && ~flush;
+assign valid_out_lsu = ex_valid;
+
+// ------------------------------------------------------------
+// redirect：EXU 级发出“单拍脉冲”的 flush/redirect
+// - 静态预测 pc+4，因此仅当 ben/jal/jalr/ecall/mret 时需要 redirect
+// - 只在本级接收该条指令时置位一次，避免 LSU 阻塞导致重复 flush
+// ------------------------------------------------------------
+reg redirect_valid_r;
+reg [31:0] redirect_pc_r;
+assign redirect_valid = redirect_valid_r;
+assign redirect_pc    = redirect_pc_r;
+
+wire [31:0] snpc = pc + 32'd4;
+wire jen = (opcode == 7'b1101111) | (opcode == 7'b1100111); // jal / jalr
+wire redirect_fire = valid_in_idu && ex_can_accept && (ben | jen | is_ecall | is_mret);
+wire [1:0] dnpc_select = {is_ecall | is_mret, ben | jen};
+wire [31:0] redirect_pc_next;
+MuxKeyWithDefault #(4, 2, 32) exu_redirect_pc_mux(redirect_pc_next, dnpc_select, 32'b0, {
+  2'b00, snpc,
+  2'b01, aluOut,
+  2'b10, csr_out,
+  2'b11, csr_out
+});
 
 always @(posedge clk) begin
 
@@ -77,12 +102,22 @@ always @(posedge clk) begin
 
   if (rst) begin
     ex_valid <= 1'b0;
-  end
-  else if (flush) begin
-    ex_valid <= 1'b0;
+    redirect_valid_r <= 1'b0;
+    redirect_pc_r    <= 32'b0;
   end
   else if (ex_can_accept) begin
     ex_valid <= valid_in_idu;
+
+    // 默认清零，若本拍接收的指令需要 redirect，则产生单拍脉冲
+    redirect_valid_r <= 1'b0;
+    if (redirect_fire) begin
+      redirect_valid_r <= 1'b1;
+      redirect_pc_r    <= redirect_pc_next;
+    end
+    else begin
+      redirect_pc_r    <= redirect_pc_r;
+    end
+
     if (valid_in_idu) begin
       ben_buf        <= ben;
       aluOut_buf     <= aluOut;
@@ -105,6 +140,11 @@ always @(posedge clk) begin
       csr_wen_buf    <= csr_wen;
       csr_waddr_buf  <= csr_waddr;
     end 
+  end
+  else begin
+    // LSU 不 ready 且本级有指令：保持 redirect 输出为 0，避免重复 flush
+    redirect_valid_r <= 1'b0;
+    redirect_pc_r    <= redirect_pc_r;
   end
 end
 

@@ -221,8 +221,9 @@ wire [4:0] rd_wbu;
 wire [31:0] gpr_wdata_wbu;
 wire csr_wen_wbu;
 wire valid_wbu;
-wire redirect_valid_wbu;
 wire flush_pipeline;
+wire redirect_valid_exu_lsu;
+wire [31:0] redirect_pc_exu_lsu;
 wire [11:0] csr_waddr_wbu;
 wire [31:0] csr_wdata_wbu;
 wire is_ecall_wbu;
@@ -237,7 +238,8 @@ wire ready_idu_ifu, ready_exu_idu, ready_lsu_exu, ready_wbu_lsu;
 wire valid_ifu_idu, valid_idu_exu, valid_exu_lsu, valid_lsu_wbu;
 wire valid_idu_raw;
 
-assign flush_pipeline = redirect_valid_wbu;
+// flush/redirect 提前到 EXU/LSU 级（比原来 WBU 提前一个周期）
+assign flush_pipeline = redirect_valid_exu_lsu;
 
 PC_reg pc_reg(.clk(clk), .rst(rst), .valid_wbu(valid_wbu), .dnpc(dnpc), .pc(pc), .done(done));
 
@@ -301,7 +303,7 @@ IFU ifu(
   
   // input
   .pc(pc), 
-  .redirect_pc(dnpc),
+  .redirect_pc(redirect_pc_exu_lsu),
   
   // output
   .pc_buf(pc_ifu_idu),
@@ -427,6 +429,8 @@ EXU exu(
 
   .ready_in_lsu(ready_lsu_exu), 
   .valid_out_lsu(valid_exu_lsu),  
+  .redirect_valid(redirect_valid_exu_lsu),
+  .redirect_pc(redirect_pc_exu_lsu),
 
   .valid_in_idu(valid_idu_exu), 
   .ready_out_idu(ready_exu_idu), 
@@ -473,8 +477,8 @@ EXU exu(
   .opcode_buf(opcode_exu),
  
   .aluOut_buf(aluOut_exu),
-  .csr_wdata_buf(csr_wdata_exu),
-  .flush(flush_pipeline)
+  .csr_wdata_buf(csr_wdata_exu)
+  // EXU 不再接收 flush（redirect/flush 在 EXU 侧单拍产生，并对前端生效）
 );
 
 wire ben_lsu;
@@ -730,8 +734,8 @@ WBU wbu(
   .csr_waddr_buf(csr_waddr_wbu),
   .csr_wdata_buf(csr_wdata_wbu),
 
-  .valid_out_wbu(valid_wbu),
-  .redirect_valid(redirect_valid_wbu)
+  .valid_out_wbu(valid_wbu)
+  // WBU 不再产生 flush/redirect 信号
 );
 
 // ==============================================

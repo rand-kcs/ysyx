@@ -30,8 +30,7 @@ module WBU(
   output [11:0] csr_waddr_buf,
   output [31:0] csr_wdata_buf,
 
-  output valid_out_wbu,
-  output redirect_valid
+  output valid_out_wbu
 );
 
 assign csr_waddr_buf = csr_waddr;
@@ -53,7 +52,6 @@ assign snpc = pc + 4;
 wire jen;
 wire [1:0] dnpc_select;
 assign jen = (opcode === 7'b1101111 | opcode === 7'b1100111); // jal and jalr
-assign redirect_valid = valid_in_lsu & (ben | jen | is_ecall | is_mret);
 assign dnpc_select = {is_ecall|is_mret, ben|jen};
 
 MuxKeyWithDefault #(4, 2, 32) dnpcMKWD(dnpc, dnpc_select, 32'b0, {
