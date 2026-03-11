@@ -12,6 +12,12 @@ module EXU(
   output wire redirect_valid,
   output wire [31:0] redirect_pc,
 
+  // BPU update (fire once when EXU accepts a CFI)
+  output wire        bpu_update_en,
+  output wire [31:0] bpu_update_pc,
+  output wire        bpu_update_taken,
+  output wire [31:0] bpu_update_target,
+
   // EXU 本来 要用的
   input [2:0] func3,
   input [6:0] opcode,
@@ -23,6 +29,9 @@ module EXU(
 	input [1:0] amux1,
 	input [1:0] amux2,
   input [31:0] csr_out,
+
+  // predicted next pc from front-end (aligned with this instruction)
+  input [31:0] pred_next_pc,
 
   // EXU 传递给下一单元的 : LSU, WBU
   input [7:0] wmask,
@@ -74,7 +83,7 @@ assign valid_out_lsu = ex_valid;
 
 // ------------------------------------------------------------
 // redirect：EXU 级发出“单拍脉冲”的 flush/redirect
-// - 静态预测 pc+4，因此仅当 ben/jal/jalr/ecall/mret 时需要 redirect
+// - 使用 BPU 动态预测：仅当预测失败（或特权跳转）时 redirect
 // - 只在本级接收该条指令时置位一次，避免 LSU 阻塞导致重复 flush
 // ------------------------------------------------------------
 reg redirect_valid_r;
@@ -83,16 +92,23 @@ assign redirect_valid = redirect_valid_r;
 assign redirect_pc    = redirect_pc_r;
 
 wire [31:0] snpc = pc + 32'd4;
-wire jen = (opcode == 7'b1101111) | (opcode == 7'b1100111); // jal / jalr
-wire redirect_fire = valid_in_idu && ex_can_accept && (ben | jen | is_ecall | is_mret);
-wire [1:0] dnpc_select = {is_ecall | is_mret, ben | jen};
-wire [31:0] redirect_pc_next;
-MuxKeyWithDefault #(4, 2, 32) exu_redirect_pc_mux(redirect_pc_next, dnpc_select, 32'b0, {
-  2'b00, snpc,
-  2'b01, aluOut,
-  2'b10, csr_out,
-  2'b11, csr_out
-});
+wire is_branch = (opcode == 7'b1100011);
+wire is_jal    = (opcode == 7'b1101111);
+wire is_jalr   = (opcode == 7'b1100111);
+wire is_cfi    = is_branch | is_jal | is_jalr;
+
+wire actual_taken  = is_branch ? ben : (is_jal | is_jalr);
+wire [31:0] actual_target_taken = aluOut;      // branch/jal/jalr target are all from ALU
+wire [31:0] cfi_dnpc_real = actual_taken ? actual_target_taken : snpc;  // real next pc for branch/jump
+wire mispredict = is_cfi && (pred_next_pc != cfi_dnpc_real);
+
+wire redirect_fire = valid_in_idu && ex_can_accept && (mispredict | is_ecall | is_mret);
+wire [31:0] redirect_pc_next = (is_ecall | is_mret) ? csr_out : cfi_dnpc_real;
+
+assign bpu_update_en     = valid_in_idu && ex_can_accept && is_cfi;
+assign bpu_update_pc     = pc;
+assign bpu_update_taken  = actual_taken;
+assign bpu_update_target = actual_target_taken;
 
 always @(posedge clk) begin
 
