@@ -20,6 +20,7 @@ module IDU (
 
   input [31:0] pc,
 	input [31:0] inst,
+  input [31:0]  pred_next_pc,
   output reg [31:0] pc_buf,
 	output reg [4:0] rs1_buf,
 	output reg [4:0] rs2_buf,
@@ -41,6 +42,7 @@ module IDU (
   output reg is_mret_buf,
   output reg use_rs1_buf,
   output reg use_rs2_buf,
+  output reg [31:0] pred_next_pc_buf,
 
   input flush,
   input stall
@@ -122,6 +124,7 @@ always @(posedge clk) begin
       is_mret_buf  <= is_mret;     
       use_rs1_buf  <= use_rs1;
       use_rs2_buf  <= use_rs2;
+      pred_next_pc_buf <= pred_next_pc;
     end
   end
 end
