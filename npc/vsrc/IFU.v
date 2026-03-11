@@ -7,6 +7,10 @@ module IFU (
   input  wire [31:0] redirect_pc,   
   input  wire flush,
 
+  // BPU (combinational predict for current req_pc)
+  input  wire        bpu_taken,
+  input  wire [31:0] bpu_target,
+
   // AXI4-lite
   output wire [31:0] araddr,
   output wire arvalid,
@@ -21,7 +25,10 @@ module IFU (
   input  wire ready_in_idu,        
   output wire valid_out_idu,       
   output reg  [31:0] pc_buf,
-  output reg  [31:0] inst
+  output reg  [31:0] inst,
+
+  // predicted next pc for this instruction (dnpc predicted by IFU)
+  output reg  [31:0] pred_next_pc_buf
 );
 
 // ========== 状态定义 ==========
@@ -32,12 +39,13 @@ localparam [1:0] WAIT_ADDR = 2'b00,
 reg [1:0] state; 
 
 // 独立取指指针与缓存
-reg [31:0] fetch_pc;
 reg [31:0] req_pc;
-reg [31:0] araddr_reg;
 
 reg if_valid;
 reg kill_resp;
+
+// outstanding request's predicted next pc (latched on address handshake)
+reg [31:0] req_pred_next_pc;
 
 `ifdef DEBUG_ON
 // 【计时器】：内部累加器，仅在 DEBUG_ON 时编译
@@ -46,7 +54,7 @@ reg [31:0] timer;
 
 // ========== 静态信号输出 ==========
 assign arsize  = 3'b010; 
-assign araddr  = araddr_reg;
+assign araddr  = req_pc;
 assign arvalid = (state == WAIT_ADDR) && ~rst;
 assign rready  = (state == WAIT_DATA);
 
@@ -57,13 +65,13 @@ assign valid_out_idu = if_valid && ~flush;
 always @(posedge clk) begin
   if (rst) begin
     state        <= WAIT_ADDR;
-    araddr_reg   <= pc;
     req_pc       <= pc;
-    fetch_pc     <= pc + 32'd4;
     pc_buf       <= 32'b0;
     inst         <= 32'b0;
     if_valid     <= 1'b0;
     kill_resp    <= 1'b0;
+
+    pred_next_pc_buf <= 32'b0;
     
 `ifdef DEBUG_ON
     timer        <= 32'd0;
@@ -79,10 +87,9 @@ always @(posedge clk) begin
       if (state == WAIT_IDU) begin
         // 总线空闲，直接切换地址并发起新请求
         state      <= WAIT_ADDR;
-        araddr_reg <= redirect_pc;
         req_pc     <= redirect_pc;
-        fetch_pc   <= redirect_pc + 32'd4;
         kill_resp  <= 1'b0;
+
         
 `ifdef DEBUG_ON
         timer      <= 32'd0; // 发起了新请求，重新开始计时
@@ -90,15 +97,13 @@ always @(posedge clk) begin
       end 
       else begin
         // 总线正忙，只能先存下目标 PC
-        fetch_pc <= redirect_pc; 
+        req_pred_next_pc <= redirect_pc; 
         
         // 如果正好此时废弃数据回来了，下一拍可以直接发新请求
         if (state == WAIT_DATA && rvalid) begin
           kill_resp  <= 1'b0;
           state      <= WAIT_ADDR;
-          araddr_reg <= redirect_pc; 
           req_pc     <= redirect_pc;
-          fetch_pc   <= redirect_pc + 32'd4;
           
 `ifdef DEBUG_ON
           timer      <= 32'd0; // 发起了新请求，重新开始计时
@@ -138,6 +143,9 @@ always @(posedge clk) begin
 `endif
           if (arready) begin
             state <= WAIT_DATA;
+
+            // compute and latch predicted next pc for this request (dnpc)
+            req_pred_next_pc <= bpu_taken ? bpu_target : (req_pc + 32'd4);
           end
         end
         
@@ -147,9 +155,7 @@ always @(posedge clk) begin
               // 废弃数据返回：丢掉它，立刻去取缓存的新地址
               kill_resp  <= 1'b0;
               state      <= WAIT_ADDR;
-              araddr_reg <= fetch_pc;
-              req_pc     <= fetch_pc;
-              fetch_pc   <= fetch_pc + 32'd4;
+              req_pc     <= req_pred_next_pc;
               
 `ifdef DEBUG_ON
               timer      <= 32'd0; // 抛弃旧请求，发出新请求，清零！
@@ -161,6 +167,8 @@ always @(posedge clk) begin
               inst         <= rdata;
               if_valid     <= 1'b1;
               state        <= WAIT_IDU;
+
+              pred_next_pc_buf <= req_pred_next_pc;
               
 `ifdef DEBUG_ON
               // 成功拿到指令！当前 timer 值加上这一拍，就是总延迟
@@ -179,9 +187,7 @@ always @(posedge clk) begin
           // 数据已被接收：立刻切回 WAIT_ADDR，发起下一次取指
           if (ready_in_idu) begin
             state      <= WAIT_ADDR;
-            araddr_reg <= fetch_pc;
-            req_pc     <= fetch_pc;
-            fetch_pc   <= fetch_pc + 32'd4;
+            req_pc     <= req_pred_next_pc;
             
 `ifdef DEBUG_ON
             timer      <= 32'd0; // 发出下一条指令取指请求，清零！
