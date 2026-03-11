@@ -50,7 +50,6 @@ wire [TAG_WIDTH-1:0]   fetch_tag = fetch_pc[PC_WIDTH-1 : INDEX_WIDTH+2];
 
 // 判断是否命中 (有效且 Tag 匹配)
 wire fetch_hit = valid_array[fetch_idx] && (tag_array[fetch_idx] == fetch_tag);
-
 // 预测方向：如果命中，且计数器高位为 1 (即 WT(10) 或 ST(11))，则预测跳转
 assign predict_taken  = fetch_hit && counter_array[fetch_idx][1];
 // 预测目标：直接透传表里的目标地址
