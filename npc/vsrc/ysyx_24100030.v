@@ -281,6 +281,29 @@ wire [2:0] ifu_arsize;
 wire ifu_rvalid;
 wire ifu_rready;
 
+// ========== BPU <-> IFU/EXU ==========
+wire        bpu_predict_taken;
+wire [31:0] bpu_predict_target;
+wire        bpu_update_en;
+wire [31:0] bpu_update_pc;
+wire        bpu_update_taken;
+wire [31:0] bpu_update_target;
+
+wire [31:0] pred_next_pc_ifu_idu;
+wire [31:0] pred_next_pc_idu_exu;
+
+BPU bpu(
+  .clk(clk),
+  .rst(rst),
+  .fetch_pc(ifu_araddr),
+  .predict_taken(bpu_predict_taken),
+  .predict_target(bpu_predict_target),
+  .update_en(bpu_update_en),
+  .update_pc(bpu_update_pc),
+  .update_taken(bpu_update_taken),
+  .update_target(bpu_update_target)
+);
+
 // ========== IFU实例化 ==========
 IFU ifu(
   .clk(clk), 
@@ -300,6 +323,8 @@ IFU ifu(
   .ready_in_idu(ready_idu_ifu), 
   .valid_out_idu(valid_ifu_idu), 
   .flush(flush_pipeline),
+  .bpu_taken(bpu_predict_taken),
+  .bpu_target(bpu_predict_target),
   
   // input
   .pc(pc), 
@@ -307,7 +332,8 @@ IFU ifu(
   
   // output
   .pc_buf(pc_ifu_idu),
-  .inst(inst_ifu_idu)
+  .inst(inst_ifu_idu),
+  .pred_next_pc_buf(pred_next_pc_ifu_idu)
 );
 
 //assign inst = inst_ifu_idu;
@@ -375,6 +401,7 @@ IDU idu(
 
   .pc(pc_ifu_idu),
   .inst(inst_ifu_idu),
+  .pred_next_pc(pred_next_pc_ifu_idu),
 
   // output
   .pc_buf(pc_idu),
@@ -398,6 +425,7 @@ IDU idu(
   .is_mret_buf(is_mret_idu),
   .use_rs1_buf(use_rs1_idu),
   .use_rs2_buf(use_rs2_idu),
+  .pred_next_pc_buf(pred_next_pc_idu_exu),
   .flush(flush_pipeline),
   .stall(bypass_stall)
 );
@@ -431,6 +459,10 @@ EXU exu(
   .valid_out_lsu(valid_exu_lsu),  
   .redirect_valid(redirect_valid_exu_lsu),
   .redirect_pc(redirect_pc_exu_lsu),
+  .bpu_update_en(bpu_update_en),
+  .bpu_update_pc(bpu_update_pc),
+  .bpu_update_taken(bpu_update_taken),
+  .bpu_update_target(bpu_update_target),
 
   .valid_in_idu(valid_idu_exu), 
   .ready_out_idu(ready_exu_idu), 
@@ -444,6 +476,7 @@ EXU exu(
   .amux2(amux2_idu),
   .is_ecall(is_ecall_idu),
   .is_mret(is_mret_idu),
+  .pred_next_pc(pred_next_pc_idu_exu),
 
   .src1(src1_exu_in), 
   .src2(src2_exu_in),
