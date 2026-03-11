@@ -105,6 +105,17 @@ wire mispredict = is_cfi && (pred_next_pc != cfi_dnpc_real);
 wire redirect_fire = valid_in_idu && ex_can_accept && (mispredict | is_ecall | is_mret);
 wire [31:0] redirect_pc_next = (is_ecall | is_mret) ? csr_out : cfi_dnpc_real;
 
+`ifdef DEBUG_ON
+// ------------------------------------------------------------
+// Performance counters (DEBUG only)
+// - Count CFI (branch/jal/jalr) prediction correctness in EXU
+// ------------------------------------------------------------
+reg [31:0] cfi_total_cnt;
+reg [31:0] cfi_correct_cnt;
+reg [31:0] cfi_misp_cnt;
+wire cfi_fire = valid_in_idu && ex_can_accept && is_cfi;
+`endif
+
 assign bpu_update_en     = valid_in_idu && ex_can_accept && is_cfi;
 assign bpu_update_pc     = pc;
 assign bpu_update_taken  = actual_taken;
@@ -120,6 +131,12 @@ always @(posedge clk) begin
     ex_valid <= 1'b0;
     redirect_valid_r <= 1'b0;
     redirect_pc_r    <= 32'b0;
+
+`ifdef DEBUG_ON
+    cfi_total_cnt   <= 32'd0;
+    cfi_correct_cnt <= 32'd0;
+    cfi_misp_cnt    <= 32'd0;
+`endif
   end
   else if (ex_can_accept) begin
     ex_valid <= valid_in_idu;
@@ -133,6 +150,24 @@ always @(posedge clk) begin
     else begin
       redirect_pc_r    <= redirect_pc_r;
     end
+
+`ifdef DEBUG_ON
+    if (cfi_fire) begin
+      cfi_total_cnt <= cfi_total_cnt + 32'd1;
+      if (mispredict) begin
+        cfi_misp_cnt <= cfi_misp_cnt + 32'd1;
+      end
+      else begin
+        cfi_correct_cnt <= cfi_correct_cnt + 32'd1;
+      end
+
+      $display("[BPU PERF] pc=0x%08x pred_next=0x%08x real_next=0x%08x %s | total=%0d correct=%0d misp=%0d",
+               pc, pred_next_pc, cfi_dnpc_real, mispredict ? "MISPRED" : "CORRECT",
+               cfi_total_cnt + 32'd1,
+               mispredict ? cfi_correct_cnt : (cfi_correct_cnt + 32'd1),
+               mispredict ? (cfi_misp_cnt + 32'd1) : cfi_misp_cnt);
+    end
+`endif
 
     if (valid_in_idu) begin
       ben_buf        <= ben;
