@@ -145,7 +145,8 @@ always @(posedge clk) begin
             state <= WAIT_DATA;
 
             // compute and latch predicted next pc for this request (dnpc)
-            req_pred_next_pc <= bpu_taken ? bpu_target : (req_pc + 32'd4);
+            if(!kill_resp)
+              req_pred_next_pc <= bpu_taken ? bpu_target : (req_pc + 32'd4);
           end
         end
         
