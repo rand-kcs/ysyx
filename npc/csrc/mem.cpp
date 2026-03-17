@@ -108,12 +108,13 @@ extern "C" void flash_read(int32_t addr, int32_t *data) {
 
 
 static inline bool in_pmem(paddr_t addr) {
-  return addr - CONFIG_MBASE < CONFIG_MSIZE;
+  return addr - CONFIG_FLASH_BASE < CONFIG_FLASH_SIZE;
 }
 
 int pmem_read_trace(int addr) {
+  // in flash
   if(in_pmem(addr)){
-  word_t ret = *(uint32_t*)guest_to_host(addr);
+  word_t ret = *(uint32_t*)guest_to_host_flash(addr);
   return ret;
   }else 
     Log("PMEM OUT OF BOUND\n");
