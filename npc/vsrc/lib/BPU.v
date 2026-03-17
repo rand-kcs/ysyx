@@ -83,10 +83,10 @@ always @(posedge clk) begin
         else begin
             // 是“老熟人”（Tag 匹配），根据 2-bit 状态机规则进行更新
             case (counter_array[update_idx])
-                SNT (2'b00): counter_array[update_idx] <= update_taken ? WNT : SNT; // 00 -> 跳-> 01, 不跳-> 00
-                WNT (2'b01): counter_array[update_idx] <= update_taken ? WT  : SNT; // 01 -> 跳-> 10, 不跳-> 00
-                WT  (2'b10): counter_array[update_idx] <= update_taken ? ST  : WNT; // 10 -> 跳-> 11, 不跳-> 01
-                ST  (2'b11): counter_array[update_idx] <= update_taken ? ST  : WT;  // 11 -> 跳-> 11, 不跳-> 10
+                SNT : counter_array[update_idx] <= update_taken ? WNT : SNT; // 00 -> 跳-> 01, 不跳-> 00
+                WNT : counter_array[update_idx] <= update_taken ? WT  : SNT; // 01 -> 跳-> 10, 不跳-> 00
+                WT  : counter_array[update_idx] <= update_taken ? ST  : WNT; // 10 -> 跳-> 11, 不跳-> 01
+                ST  : counter_array[update_idx] <= update_taken ? ST  : WT;  // 11 -> 跳-> 11, 不跳-> 10
             endcase
         end
     end
