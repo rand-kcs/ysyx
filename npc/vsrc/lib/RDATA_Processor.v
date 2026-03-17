@@ -64,9 +64,11 @@ import "DPI-C" function void difftest_skip_ref();
     endcase
   end
 
+`ifdef NOT_SYS
   always@(*) begin
     if(is_region_1000)
       difftest_skip_ref();
   end
+`endif
 
 endmodule

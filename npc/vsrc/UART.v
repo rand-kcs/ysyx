@@ -30,7 +30,9 @@ module UART(
  input bready
 );
 
+`ifdef NO_SYS
 import "DPI-C" function void difftest_skip_ref();
+`endif
 
 
 // ========== 1. 状态定义与状态寄存器 ==========
@@ -103,7 +105,9 @@ always @(negedge clk) begin
     wstrbuf <= wstrb;
   end
   if(bready&&bvalid) begin
+`ifdef NO_SYS
     difftest_skip_ref();
+`endif
     $write("%c", wbuf[7:0]);
     end
 end

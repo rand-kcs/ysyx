@@ -135,8 +135,10 @@ $dumpfile("build/wave.fst");
 $dumpvars();
 end
 
+`ifdef NOT_SYS
 export "DPI-C" function ebreakYes;
 import "DPI-C" function void npc_error();
+`endif
 
 function ebreakYes;
     ebreakYes = !|((inst_ifu_idu & 32'hfff0707f) ^ 32'h00100073);
@@ -193,7 +195,9 @@ endfunction
                     $display("\n[Error] Invalid Memory READ Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_araddr);
                     $display("        Valid Ranges: [0x20000000-0x20000fff] or [0x0f000000-0x0f001fff]");
+                    `ifdef NOT_SYS
                     npc_error();
+                    `endif
                 end
             end
 
@@ -205,7 +209,9 @@ endfunction
                     $display("\n[Error] Invalid Memory WRITE Access at time %t", $time);
                     $display("        Address: 0x%h is out of bounds!", io_master_awaddr);
                     $display("        Valid Range: [0x0f000000-0x0f001fff]");
+                    `ifdef NOT_SYS
                     npc_error();
+                    `endif
                 end
             end
         end
@@ -214,7 +220,7 @@ endfunction
 
     reg [31:0]       pc  /*verilator public*/;
    reg              done/*verilator public*/;
-     reg [31:0]       rf_dbg [31:0]  /*verilator public*/;
+     //reg [31:0]       rf_dbg [31:0]  /*verilator public*/;
 
 wire [31:0] dnpc;
 wire [4:0] rd_wbu;
@@ -250,8 +256,7 @@ wire [31:0] csr_out_idu;
 
 RegisterFile #(5, 32) gprs(.clk(clk), .wdata(gpr_wdata_wbu),  .valid_wbu(valid_wbu),
   .waddr(rd_wbu), .wen(gpr_wen_wbu), .rs1(rs1_idu), .rs2(rs2_idu), 
-  .src1(src1_gpr), .src2(src2_gpr),
-  .dbg_rf(rf_dbg)
+  .src1(src1_gpr), .src2(src2_gpr)
 );
 
 CSRs #(12, 32) csrs(

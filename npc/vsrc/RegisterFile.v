@@ -8,9 +8,8 @@ module RegisterFile #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
   input [ADDR_WIDTH-1:0] rs1,
   input [ADDR_WIDTH-1:0] rs2,
   output [DATA_WIDTH-1:0] src1,
-	output [DATA_WIDTH-1:0] src2,
+	output [DATA_WIDTH-1:0] src2
 
-	output [DATA_WIDTH-1 : 0] dbg_rf [2**ADDR_WIDTH-1:0]
 
 );
   reg [DATA_WIDTH-1:0] rf [2**ADDR_WIDTH-1:0];
@@ -38,5 +37,4 @@ module RegisterFile #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
   assign src2 = rf[rs2];
 
   // For Debug:
-	assign dbg_rf = rf;	
 endmodule
