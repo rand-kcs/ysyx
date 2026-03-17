@@ -138,7 +138,6 @@ end
 `ifdef NOT_SYS
 export "DPI-C" function ebreakYes;
 import "DPI-C" function void npc_error();
-`endif
 
 function ebreakYes;
     ebreakYes = !|((inst_ifu_idu & 32'hfff0707f) ^ 32'h00100073);
@@ -216,6 +215,7 @@ endfunction
             end
         end
     end
+`endif
 
 
     reg [31:0]       pc  /*verilator public*/;
