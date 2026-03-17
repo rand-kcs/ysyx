@@ -34,7 +34,7 @@ INCFLAGS = $(addprefix -I, $(INC_PATH))
 # --- 5. 编译参数与链接参数 ---
 VERILATOR = verilator
 VERILATOR_FLAGS = -MMD --build -cc -O3 --x-assign fast --x-initial fast --noassert
-VERILATOR_FLAGS += -Wall --timescale "1ns/1ns" --no-timing -DDEBUG_ON #-DDEBUG_ON_DETAIL
+VERILATOR_FLAGS += -Wall --timescale "1ns/1ns" --no-timing -DDEBUG_ON  -DNO_SYS#-DDEBUG_ON_DETAIL 
 
 # 警告抑制逻辑
 SUPPRESS_PIN_WARN ?= 0
