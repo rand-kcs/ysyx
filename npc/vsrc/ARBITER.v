@@ -6,11 +6,14 @@ module ARBITER (
   input [31:0] m0_araddr,
   input        m0_arvalid,
   input [2:0]   m0_arsize,
+  input [7:0]   m0_arlen,
+  input [1:0]   m0_arburst,
   output reg   m0_arready,      // 改为reg
   
   output reg [31:0] m0_rdata,   // 改为reg
   output reg [1:0]  m0_rresp,   // 改为reg
   output reg        m0_rvalid,  // 改为reg
+  output reg        m0_rlast,
   input             m0_rready,
   
   input [31:0]  m0_awaddr,
@@ -30,11 +33,14 @@ module ARBITER (
   input [31:0]  m1_araddr,
   input         m1_arvalid,
   input [2:0]   m1_arsize,
+  input [7:0]   m1_arlen,
+  input [1:0]   m1_arburst,
   output reg    m1_arready,     // 改为reg
   
   output reg [31:0] m1_rdata,   // 改为reg
   output reg [1:0]  m1_rresp,   // 改为reg
   output reg        m1_rvalid,  // 改为reg
+  output reg        m1_rlast,
   input             m1_rready,
   
   input [31:0]  m1_awaddr,
@@ -54,11 +60,14 @@ module ARBITER (
   output reg [31:0] s_araddr,   // 改为reg
   output reg        s_arvalid,  // 改为reg
   output reg [2:0]  s_arsize,
+  output reg [7:0]  s_arlen,
+  output reg [1:0]  s_arburst,
   input             s_arready,
   
   input [31:0]  s_rdata,
   input [1:0]   s_rresp,
   input         s_rvalid,
+  input         s_rlast,
   output reg    s_rready,       // 改为reg
   
   output reg [31:0] s_awaddr,   // 改为reg
@@ -196,14 +205,18 @@ always @(*) begin
     m0_rdata = 32'b0;
     m0_rresp = 2'b00;
     m0_rvalid = 1'b0;
+    m0_rlast = 1'b0;
     
     m1_arready = 1'b0;
     m1_rdata = 32'b0;
     m1_rresp = 2'b00;
     m1_rvalid = 1'b0;
+    m1_rlast = 1'b0;
     
     s_araddr = 32'b0;
     s_arsize = 3'b010;
+    s_arlen = 8'b0;
+    s_arburst = 2'b01;
     s_arvalid = 1'b0;
     s_rready = 1'b0;
     
@@ -214,10 +227,14 @@ always @(*) begin
             if (m0_arvalid === 1'b1) begin
                 s_araddr = m0_araddr;
                 s_arsize = m0_arsize;
+                s_arlen = m0_arlen;
+                s_arburst = m0_arburst;
             end 
             else begin
                 s_araddr = m1_araddr;
                 s_arsize = m1_arsize;
+                s_arlen = m1_arlen;
+                s_arburst = m1_arburst;
             end
             // TO MASTER
             m0_arready = s_arready; 
@@ -228,6 +245,7 @@ always @(*) begin
             m0_rdata = s_rdata;
             m0_rresp = s_rresp;
             m0_rvalid = s_rvalid;
+            m0_rlast = s_rlast;
             s_rready = m0_rready;
         end
 
@@ -235,6 +253,7 @@ always @(*) begin
             m1_rdata = s_rdata;
             m1_rresp = s_rresp;
             m1_rvalid = s_rvalid;
+            m1_rlast = s_rlast;
             s_rready = m1_rready;
         end
 

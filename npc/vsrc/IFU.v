@@ -11,16 +11,13 @@ module IFU (
   input  wire        bpu_taken,
   input  wire [31:0] bpu_target,
 
-  // AXI4-lite
-  output wire [31:0] araddr,
-  output wire arvalid,
-  input  wire arready,
-  output wire [2:0]  arsize,
-
-  input  wire [31:0] rdata,
-  input  wire [1:0]  rresp,
-  input  wire rvalid,
-  output wire rready,
+  // 与 ICache 的简化接口（请求/响应）
+  output wire [31:0] req_addr,
+  output wire        req_valid,
+  input  wire        req_ready,
+  input  wire [31:0] resp_data,
+  input  wire        resp_valid,
+  output wire        resp_ready,
 
   input  wire ready_in_idu,        
   output wire valid_out_idu,       
@@ -53,10 +50,9 @@ reg [31:0] timer;
 `endif
 
 // ========== 静态信号输出 ==========
-assign arsize  = 3'b010; 
-assign araddr  = req_pc;
-assign arvalid = (state == WAIT_ADDR) && ~rst;
-assign rready  = (state == WAIT_DATA);
+assign req_addr   = req_pc;
+assign req_valid  = (state == WAIT_ADDR) && ~rst;
+assign resp_ready = (state == WAIT_DATA);
 
 // 对外接口信号
 assign valid_out_idu = if_valid && ~flush;
@@ -100,7 +96,7 @@ always @(posedge clk) begin
         req_pred_next_pc <= redirect_pc; 
         
         // 如果正好此时废弃数据回来了，下一拍可以直接发新请求
-        if (state == WAIT_DATA && rvalid) begin
+        if (state == WAIT_DATA && resp_valid) begin
           kill_resp  <= 1'b0;
           state      <= WAIT_ADDR;
           req_pc     <= redirect_pc;
@@ -110,7 +106,7 @@ always @(posedge clk) begin
 `endif
         end 
 
-         else if (state == WAIT_ADDR && arready) begin
+        else if (state == WAIT_ADDR && req_ready) begin
           state     <= WAIT_DATA; // 握手已发生，必须跳到 WAIT_DATA 等待数据返回
           kill_resp <= 1'b1;      // 标记即将返回的数据为废弃数据
 `ifdef DEBUG_ON
@@ -141,7 +137,7 @@ always @(posedge clk) begin
 `ifdef DEBUG_ON
           timer <= timer + 32'd1; // 等待地址握手，累加
 `endif
-          if (arready) begin
+          if (req_ready) begin
             state <= WAIT_DATA;
 
             // compute and latch predicted next pc for this request (dnpc)
@@ -151,7 +147,7 @@ always @(posedge clk) begin
         end
         
         WAIT_DATA: begin
-          if (rvalid) begin
+          if (resp_valid) begin
             if (kill_resp) begin
               // 废弃数据返回：丢掉它，立刻去取缓存的新地址
               kill_resp  <= 1'b0;
@@ -165,7 +161,7 @@ always @(posedge clk) begin
             else begin
               // 有效数据返回：锁存数据，进入等待 IDU 接收状态
               pc_buf       <= req_pc;
-              inst         <= rdata;
+              inst         <= resp_data;
               if_valid     <= 1'b1;
               state        <= WAIT_IDU;
 
@@ -194,6 +190,9 @@ always @(posedge clk) begin
             timer      <= 32'd0; // 发出下一条指令取指请求，清零！
 `endif
           end
+        end
+        default: begin
+          state <= WAIT_ADDR;
         end
       endcase
     end

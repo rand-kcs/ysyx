@@ -271,15 +271,26 @@ CSRs #(12, 32) csrs(
   .data(csr_out_idu)
 );
 
-// ========== IFU到ARBITER的连接信号 ==========
-wire [31:0] ifu_araddr;
-wire ifu_arvalid;
-wire ifu_arready;
-wire [31:0] ifu_rdata;
-wire [1:0] ifu_rresp;
-wire [2:0] ifu_arsize;
-wire ifu_rvalid;
-wire ifu_rready;
+// ========== IFU到ICACHE连接信号 ==========
+wire [31:0] ifu_req_addr;
+wire        ifu_req_valid;
+wire        ifu_req_ready;
+wire [31:0] ifu_resp_data;
+wire        ifu_resp_valid;
+wire        ifu_resp_ready;
+
+// ========== ICACHE到ARBITER连接信号 ==========
+wire [31:0] icache_araddr;
+wire        icache_arvalid;
+wire        icache_arready;
+wire [7:0]  icache_arlen;
+wire [2:0]  icache_arsize;
+wire [1:0]  icache_arburst;
+wire [31:0] icache_rdata;
+wire [1:0]  icache_rresp;
+wire        icache_rvalid;
+wire        icache_rready;
+wire        icache_rlast;
 
 // ========== BPU <-> IFU/EXU ==========
 wire        bpu_predict_taken;
@@ -295,7 +306,7 @@ wire [31:0] pred_next_pc_idu_exu;
 BPU bpu(
   .clk(clk),
   .rst(rst),
-  .fetch_pc(ifu_araddr),
+  .fetch_pc(ifu_req_addr),
   .predict_taken(bpu_predict_taken),
   .predict_target(bpu_predict_target),
   .update_en(bpu_update_en),
@@ -309,16 +320,13 @@ IFU ifu(
   .clk(clk), 
   .rst(rst), 
   
-  // AXI接口连接到ARBITER
-  .araddr(ifu_araddr),
-  .arvalid(ifu_arvalid),
-  .arready(ifu_arready),
-  .arsize(ifu_arsize),
-  
-  .rdata(ifu_rdata),
-  .rresp(ifu_rresp),
-  .rvalid(ifu_rvalid),
-  .rready(ifu_rready),
+  // 简化接口连接到 ICACHE
+  .req_addr(ifu_req_addr),
+  .req_valid(ifu_req_valid),
+  .req_ready(ifu_req_ready),
+  .resp_data(ifu_resp_data),
+  .resp_valid(ifu_resp_valid),
+  .resp_ready(ifu_resp_ready),
   
   .ready_in_idu(ready_idu_ifu), 
   .valid_out_idu(valid_ifu_idu), 
@@ -334,6 +342,31 @@ IFU ifu(
   .pc_buf(pc_ifu_idu),
   .inst(inst_ifu_idu),
   .pred_next_pc_buf(pred_next_pc_ifu_idu)
+);
+
+ICACHE icache(
+  .clk(clk),
+  .rst(rst),
+  .flush(flush_pipeline),
+
+  .ifu_req_addr(ifu_req_addr),
+  .ifu_req_valid(ifu_req_valid),
+  .ifu_req_ready(ifu_req_ready),
+  .ifu_resp_data(ifu_resp_data),
+  .ifu_resp_valid(ifu_resp_valid),
+  .ifu_resp_ready(ifu_resp_ready),
+
+  .araddr(icache_araddr),
+  .arvalid(icache_arvalid),
+  .arready(icache_arready),
+  .arlen(icache_arlen),
+  .arsize(icache_arsize),
+  .arburst(icache_arburst),
+  .rdata(icache_rdata),
+  .rresp(icache_rresp),
+  .rvalid(icache_rvalid),
+  .rready(icache_rready),
+  .rlast(icache_rlast)
 );
 
 //assign inst = inst_ifu_idu;
@@ -627,12 +660,15 @@ LSU lsu(
 // ========== ARBITER到顶层AXI接口的连接信号 ==========
 wire [31:0] arb_to_axi_araddr;
 wire [2:0]  arb_to_axi_arsize;
+wire [7:0]  arb_to_axi_arlen;
+wire [1:0]  arb_to_axi_arburst;
 wire        arb_to_axi_arvalid;
 wire        arb_to_axi_arready;
 wire [31:0] arb_to_axi_rdata;
 wire [1:0]  arb_to_axi_rresp;
 wire        arb_to_axi_rvalid;
 wire        arb_to_axi_rready;
+wire        arb_to_axi_rlast;
 wire [31:0] arb_to_axi_awaddr;
 wire        arb_to_axi_awvalid;
 wire        arb_to_axi_awready;
@@ -655,11 +691,14 @@ ARBITER arbiter(
   .m0_arvalid(lsu_arvalid),
   .m0_arready(lsu_arready),
   .m0_arsize(lsu_arsize),
+  .m0_arlen(8'b0),
+  .m0_arburst(2'b01),
   
   // 读数据通道
   .m0_rdata(lsu_rdata),
   .m0_rresp(lsu_rresp),
   .m0_rvalid(lsu_rvalid),
+  .m0_rlast(),
   .m0_rready(lsu_rready),
   
   // 写地址通道
@@ -680,16 +719,19 @@ ARBITER arbiter(
   
   // 主设备1接口 (Master 1) - 分配给IFU
   // 读地址通道
-  .m1_araddr(ifu_araddr),
-  .m1_arvalid(ifu_arvalid),
-  .m1_arready(ifu_arready),
-  .m1_arsize(ifu_arsize),
+  .m1_araddr(icache_araddr),
+  .m1_arvalid(icache_arvalid),
+  .m1_arready(icache_arready),
+  .m1_arsize(icache_arsize),
+  .m1_arlen(icache_arlen),
+  .m1_arburst(icache_arburst),
   
   // 读数据通道
-  .m1_rdata(ifu_rdata),
-  .m1_rresp(ifu_rresp),
-  .m1_rvalid(ifu_rvalid),
-  .m1_rready(ifu_rready),
+  .m1_rdata(icache_rdata),
+  .m1_rresp(icache_rresp),
+  .m1_rvalid(icache_rvalid),
+  .m1_rlast(icache_rlast),
+  .m1_rready(icache_rready),
   
   // 写地址通道 - IFU没有写操作
   .m1_awaddr(32'b0),
@@ -713,11 +755,14 @@ ARBITER arbiter(
   .s_arvalid(arb_to_axi_arvalid),
   .s_arready(arb_to_axi_arready),
   .s_arsize(arb_to_axi_arsize),
+  .s_arlen(arb_to_axi_arlen),
+  .s_arburst(arb_to_axi_arburst),
   
   // 读数据通道
   .s_rdata(arb_to_axi_rdata),
   .s_rresp(arb_to_axi_rresp),
   .s_rvalid(arb_to_axi_rvalid),
+  .s_rlast(arb_to_axi_rlast),
   .s_rready(arb_to_axi_rready),
   
   // 写地址通道
@@ -801,9 +846,9 @@ assign arb_to_axi_bresp  = io_master_bresp;
 assign io_master_arvalid = arb_to_axi_arvalid;
 assign io_master_araddr  = arb_to_axi_araddr;
 assign io_master_arid    = 4'b0;      // 固定ID为0，单主设备
-assign io_master_arlen   = 8'b0;      // 突发长度为1（AXI4-Lite模式）
+assign io_master_arlen   = arb_to_axi_arlen;
 assign io_master_arsize  = arb_to_axi_arsize;
-assign io_master_arburst = 2'b00;     // 
+assign io_master_arburst = arb_to_axi_arburst;
 assign arb_to_axi_arready = io_master_arready;
 
 // 读数据通道连接
@@ -811,6 +856,7 @@ assign io_master_rready = arb_to_axi_rready;
 assign arb_to_axi_rvalid = io_master_rvalid;
 assign arb_to_axi_rresp  = io_master_rresp;
 assign arb_to_axi_rdata  = io_master_rdata;
-// io_master_rlast和io_master_rid输入信号悬空
+assign arb_to_axi_rlast  = io_master_rlast;
+// io_master_rid输入信号悬空
 
 endmodule
