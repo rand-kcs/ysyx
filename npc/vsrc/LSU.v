@@ -73,7 +73,10 @@ module LSU(
   output reg [1:0] rresp_out,
   output reg [1:0] bresp_out,
   output lsu_valid_o,
-  output lsu_pending_load
+  output lsu_pending_load,
+
+  // 与指令一起流水到 WBU，在写回阶段再触发 difftest_skip_ref
+  output reg skip_difftest
 );
 
 wire [31:0] raddr;// 同时也是 aluout
@@ -265,6 +268,7 @@ always@(posedge clk) begin
   if (rst) begin
     lsu_valid <= 1'b0;
     lsu_is_load_buf <= 1'b0;
+    skip_difftest <= 1'b0;
   end
   else begin
     // EXU -> LSU 握手成功：记录一条新的指令
@@ -286,6 +290,7 @@ always@(posedge clk) begin
       is_mret_buf   <= is_mret;
       wdata_exu_buf <= wdata_exu;
       lsu_is_load_buf <= mem_ren;
+      skip_difftest <= is_mtime && (mem_ren || mem_wen);
 
       //later use
       func3_buf <= func3;
@@ -302,6 +307,7 @@ always@(posedge clk) begin
     else if (current_state == WAIT_WBU) begin
      lsu_valid <= 1'b0;
      lsu_is_load_buf <= 1'b0;
+     skip_difftest <= 1'b0;
     end
   end
 end

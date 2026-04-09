@@ -415,11 +415,28 @@ assign wait_lsu_load_hazard = valid_idu_raw && lsu_pending_load && (rd_lsu != 5'
 
 assign bypass_stall = load_use_hazard || wait_lsu_load_hazard;
 
+// 旁路数据必须与 WBU 写回 gpr_wdata 一致：jal/jalr 写 pc+4 而非 ALU 目标地址；CSR 写 csr_out
+wire [31:0] snpc_exu = pc_exu + 32'd4;
+wire [31:0] snpc_lsu = pc_lsu + 32'd4;
+wire exu_is_jal  = (opcode_exu == 7'b1101111);
+wire exu_is_jalr = (opcode_exu == 7'b1100111);
+wire lsu_is_jal  = (opcode_lsu == 7'b1101111);
+wire lsu_is_jalr = (opcode_lsu == 7'b1100111);
 wire lsu_is_load = (opcode_lsu == 7'b0000011);
-assign src1_exu_in = exu_forward_hit_rs1 ? aluOut_exu :
-                     (lsu_forward_hit_rs1 ? (lsu_is_load ? rdata_w_lsu : alu_out_lsu) : src1_gpr);
-assign src2_exu_in = exu_forward_hit_rs2 ? aluOut_exu :
-                     (lsu_forward_hit_rs2 ? (lsu_is_load ? rdata_w_lsu : alu_out_lsu) : src2_gpr);
+
+wire [31:0] exu_bypass_data =
+    (exu_is_jal || exu_is_jalr) ? snpc_exu :
+    (opcode_exu == 7'b1110011)   ? csr_out_exu : aluOut_exu;
+
+wire [31:0] lsu_bypass_data =
+    lsu_is_load                 ? rdata_w_lsu :
+    (lsu_is_jal || lsu_is_jalr) ? snpc_lsu :
+    (opcode_lsu == 7'b1110011)  ? csr_out_lsu : alu_out_lsu;
+
+assign src1_exu_in = exu_forward_hit_rs1 ? exu_bypass_data :
+                     (lsu_forward_hit_rs1 ? lsu_bypass_data : src1_gpr);
+assign src2_exu_in = exu_forward_hit_rs2 ? exu_bypass_data :
+                     (lsu_forward_hit_rs2 ? lsu_bypass_data : src2_gpr);
 
 IDU idu(
   .clk(clk), 
@@ -560,6 +577,7 @@ wire [4:0] rd_lsu;
 wire [31:0] alu_out_lsu;
 wire is_ecall_lsu;
 wire is_mret_lsu;
+wire skip_difftest_lsu;
 
 // ========== LSU到ARBITER的连接信号 ==========
 wire [31:0] lsu_araddr;
@@ -654,7 +672,9 @@ LSU lsu(
   .rresp_out(),
   .bresp_out(),
   .lsu_valid_o(lsu_valid_o),
-  .lsu_pending_load(lsu_pending_load)
+  .lsu_pending_load(lsu_pending_load),
+
+  .skip_difftest(skip_difftest_lsu)
 );
 
 // ========== ARBITER到顶层AXI接口的连接信号 ==========
@@ -783,7 +803,10 @@ ARBITER arbiter(
 );
 
 WBU wbu(
-  .valid_in_lsu(valid_lsu_wbu), 
+  .clk(clk),
+  .rst(rst),
+  .valid_in_lsu(valid_lsu_wbu),
+  .skip_difftest(skip_difftest_lsu),
 
   .ben(ben_lsu),
   .opcode(opcode_lsu),

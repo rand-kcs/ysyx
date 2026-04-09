@@ -91,7 +91,7 @@ run: $(SRC_AUTO_BIND)
 		--Mdir build/ --top-module $(TOPNAME)
 	./build/VDUT $(ARGS) --log=$(LOGFILE) --diff=ref/riscv32-nemu-interpreter-so --flash=$(FLASH) 
 
-debug:
+debug: $(SRC_AUTO_BIND)
 	$(VERILATOR) --public --cc --exe --build --prefix VDUT -j 0 \
 		$(VERILATOR_FLAGS) \
 		$(INCFLAGS) \
@@ -99,7 +99,7 @@ debug:
 		-LDFLAGS "$(MYLDFLAGS) -g" \
 		$(CXXSRC) $(TOP_PATH)/$(TOPNAME).v $(VSRC) \
 		--Mdir build/ --top-module $(TOPNAME)
-	gdb --args ./build/VDUT --flash=$(FLASH) 
+	gdb --args ./build/VDUT  --diff=ref/riscv32-nemu-interpreter-so --flash=$(FLASH) 
 
 clean:
 	rm -rf build/

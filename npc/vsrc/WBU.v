@@ -1,6 +1,9 @@
 module WBU(
+  input clk,
+  input rst,
   input valid_in_lsu,
-  
+  input skip_difftest,
+
   input [6:0]  opcode,
 
   input [31:0] pc,
@@ -32,6 +35,14 @@ module WBU(
 
   output valid_out_wbu
 );
+
+import "DPI-C" function void difftest_skip_ref();
+
+// difftest 在仿真 C 侧于本指令提交后调用；此处对齐「写回有效」拍触发 skip
+always @(posedge clk) begin
+  if (!rst && valid_in_lsu && skip_difftest)
+    difftest_skip_ref();
+end
 
 assign csr_waddr_buf = csr_waddr;
 assign csr_wdata_buf = csr_wdata;

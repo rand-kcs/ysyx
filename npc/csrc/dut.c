@@ -20,6 +20,7 @@ extern "C" void difftest_skip_ref() {
 }
 
 void init_difftest(char *ref_so_file, long img_size, int port) {
+  printf(" REF TO : %s\n", ref_so_file);
   assert(ref_so_file != NULL);
 
   void *handle;

@@ -128,14 +128,16 @@ always @(*) begin
             end
         end
         
+        // 必须等 burst 最后一拍（rlast）再释放总线，否则多拍读时第一拍后回到 IDLE，
+        // s_rready 不再连到当前 master，后续 beat 无法握手，仿真会卡死。
         S_WAIT_RVALID_M0: begin
-            if (m0_rready && s_rvalid) begin
+            if (m0_rready && s_rvalid && s_rlast) begin
                 next_state_r = S_IDLE_R;
             end
         end
 
         S_WAIT_RVALID_M1: begin
-            if (m1_rready && s_rvalid) begin
+            if (m1_rready && s_rvalid && s_rlast) begin
                 next_state_r = S_IDLE_R;
             end
         end
